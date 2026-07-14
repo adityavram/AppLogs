@@ -145,6 +145,7 @@ class OfficeMonitor:
                 'front_doc': None,
                 'modified': {},
                 'frontmost': False,
+                'focus_since': None,
             }
         self.frontmost_app = None
         self.running = True
@@ -205,14 +206,23 @@ class OfficeMonitor:
             # Check frontmost status
             is_frontmost = (current_frontmost == bundle_name)
             if is_frontmost and not state['frontmost']:
+                state['focus_since'] = time.time()
+            elif not is_frontmost and state['frontmost']:
+                focus_duration = time.time() - (state['focus_since'] or time.time())
+                if focus_duration >= 3:
+                    log_event({
+                        'type': 'app_blur',
+                        'app': app_key,
+                        'bundle_name': bundle_name,
+                        'duration_s': round(focus_duration, 1),
+                    })
+                state['focus_since'] = None
+            elif is_frontmost and state['frontmost'] and state['focus_since'] is None:
+                state['focus_since'] = time.time()
+            
+            if is_frontmost and not state['frontmost']:
                 log_event({
                     'type': 'app_focus',
-                    'app': app_key,
-                    'bundle_name': bundle_name,
-                })
-            elif not is_frontmost and state['frontmost']:
-                log_event({
-                    'type': 'app_blur',
                     'app': app_key,
                     'bundle_name': bundle_name,
                 })
@@ -220,6 +230,7 @@ class OfficeMonitor:
 
             # Check documents
             current_docs = set(get_app_documents(bundle_name))
+            current_docs = {d for d in current_docs if d and d != 'missing value'}
 
             # Documents opened
             opened = current_docs - state['documents']
@@ -245,8 +256,11 @@ class OfficeMonitor:
 
             # Check front document
             front_doc = get_front_document(bundle_name)
-            if front_doc and front_doc != state['front_doc']:
-                if front_doc != '':
+            if front_doc:
+                if front_doc == 'missing value' or front_doc == '':
+                    front_doc = None
+                
+                if front_doc and front_doc != state['front_doc']:
                     log_event({
                         'type': 'doc_focus',
                         'app': app_key,

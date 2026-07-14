@@ -8,6 +8,7 @@ This guide walks you through installing AppLogs from scratch. It takes about 5 m
 - Google Chrome
 - Python 3 (pre-installed on macOS)
 - Bash or Zsh (default on macOS)
+- Microsoft Office (optional, for Office integration)
 
 ## Step 1: Clone or Download AppLogs
 
@@ -91,7 +92,46 @@ tail -3 ~/.applogs/logs/chrome-events.jsonl | jq .
 
 You should see entries for the pages you visited.
 
-## Step 4: Verify Everything Works
+## Step 4: Install the Office Integration (Optional)
+
+The Office integration logs activity in Microsoft Word, PowerPoint, and Excel — document opens, closes, focus changes, and saves.
+
+```bash
+cd ~/AppLogs
+./applogs install office
+```
+
+This will:
+- Install a macOS LaunchAgent that runs the daemon on login
+- Start the daemon immediately
+
+**macOS will prompt you to grant automation permissions.** When you see the prompt, click **OK** to allow AppLogs to query Office apps via AppleScript.
+
+If you miss the prompt, go to **System Settings → Privacy & Security → Automation** and enable permissions for Python/Terminal under the Office apps.
+
+**Verify it works:**
+
+1. Open Word, Excel, or PowerPoint
+2. Open or create a document
+3. Check the logs:
+
+```bash
+tail -3 ~/.applogs/logs/office-events.jsonl | jq .
+```
+
+You should see entries for app launch, document focus, etc.
+
+**Running manually (for testing):**
+
+If you prefer not to install the LaunchAgent, you can run the daemon directly:
+
+```bash
+python3 ~/AppLogs/integrations/office/daemon.py
+```
+
+Press Ctrl+C to stop.
+
+## Step 5: Verify Everything Works
 
 Run the status check:
 
@@ -100,7 +140,7 @@ cd ~/AppLogs
 ./applogs status
 ```
 
-You should see both integrations active with log counts.
+You should see all installed integrations active with log counts.
 
 Run a combined analysis:
 
@@ -109,9 +149,9 @@ Run a combined analysis:
 ./applogs analyze --today
 ```
 
-You should see your terminal commands and browser activity merged into a single timeline.
+You should see your terminal commands, browser activity, and Office events merged into a single timeline.
 
-## Step 5: Pin the Extension (Recommended)
+## Step 6: Pin the Chrome Extension (Recommended)
 
 To make the AppLogs icon always visible:
 
@@ -161,6 +201,33 @@ Install jq:
 ```bash
 brew install jq
 ```
+
+### Office integration not logging
+
+1. Make sure the daemon is running:
+   ```bash
+   launchctl list | grep applogs
+   ```
+   If not, start it:
+   ```bash
+   ~/AppLogs/integrations/office/install.sh
+   ```
+
+2. Check the daemon log for errors:
+   ```bash
+   cat /tmp/applogs-office.log
+   cat /tmp/applogs-office.error.log
+   ```
+
+3. Make sure Office apps are installed and you've opened them at least once
+
+4. Grant automation permissions in **System Settings → Privacy & Security → Automation**. Allow Python/Terminal to control Microsoft Word, PowerPoint, and Excel.
+
+5. Test the daemon manually:
+   ```bash
+   python3 ~/AppLogs/integrations/office/daemon.py
+   ```
+   Open an Office app and watch for log output in the terminal.
 
 ## Next Steps
 

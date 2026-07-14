@@ -10,7 +10,7 @@ This guide shows you how to use AppLogs to understand your behavior on your comp
 ./applogs timeline --today
 ```
 
-Shows a chronological merge of your terminal commands and browser activity. You'll see something like:
+Shows a chronological merge of your terminal commands, browser activity, and Office events. You'll see something like:
 
 ```
 --- 2026-07-14 ---
@@ -21,13 +21,24 @@ Shows a chronological merge of your terminal commands and browser activity. You'
   09:22:14  [.] git status
   09:22:18  [.] npm test
   09:22:45  [.] code .
+  10:30:00  [L] word launched
+  10:30:05  [W] word: Report.docx
+  10:45:00  [S] word: Report.docx
+  10:50:00  [-] word: Report.docx
 ```
 
 **Legend:**
 - `[.]` — shell command (exit code 0)
 - `[x]` — shell command (failed)
 - `[>]` — navigated to a site
-- `[~] — left a site (with time spent)
+- `[~]` — left a site (with time spent)
+- `[L]` — Office app launched
+- `[Q]` — Office app quit
+- `[W]` — Office app or document focused
+- `[ ]` — Office app lost focus (with duration)
+- `[+]` — Office document opened
+- `[-]` — Office document closed
+- `[S]` — Office document saved
 
 ### Get Behavioral Insights
 
@@ -43,6 +54,9 @@ Shows:
 - Most visited sites (where you browse)
 - Time spent per site (how long you stay)
 - Failed commands (what errors you hit)
+- Office app activity (which apps you use most)
+- Most active documents (which docs you work on)
+- Document saves (when you saved)
 
 ### Check Status
 
@@ -97,6 +111,21 @@ Find all visits to a specific site:
 ./applogs query --source chrome --grep "github" --today
 ```
 
+### Search Office Activity
+
+Find all events for a specific Office app:
+
+```bash
+./applogs query --source office --today
+./applogs query --source office --type doc_save --today
+```
+
+Find activity for a specific document:
+
+```bash
+./applogs query --source office --grep "Report" --today
+```
+
 ### Limit Results
 
 ```bash
@@ -114,6 +143,7 @@ Run `./applogs analyze --today` at the end of each day. Over time you'll notice:
 - **Your most-used tools** — top commands reveal your workflow
 - **Where your attention goes** — most visited sites show your priorities (or distractions)
 - **Your error patterns** — failed commands reveal recurring issues
+- **Your Office habits** — which apps and documents you spend time on, and how often you save
 
 ### Weekly Review
 
@@ -127,6 +157,8 @@ This gives you a broader view. Look for:
 - Command frequency changes (new tools adopted?)
 - Site patterns shifted (new research rabbit holes?)
 - Error rates (improving or getting stuck?)
+- Office app usage shifts (different documents or apps over time?)
+- Save frequency (are you saving more or less often?)
 
 ### Workflow Discovery
 
@@ -143,6 +175,18 @@ The timeline reveals workflows you didn't know you had. For example, you might s
 
 This shows: issue review → research → implementation → commit. That's a workflow pattern that could be automated or optimized.
 
+Or you might see how you work across Office and the browser:
+
+```
+  14:00  [L] excel launched
+  14:01  [+] excel: Budget.xlsx
+  14:15  [>] chatgpt.com
+  14:20  [W] excel: Budget.xlsx
+  14:25  [S] excel: Budget.xlsx
+```
+
+This shows: spreadsheet work → quick research question → back to spreadsheet → save. The gap between focus and blur reveals how long you context-switched.
+
 ## Log Files
 
 All logs are stored as JSONL in `~/.applogs/logs/`:
@@ -151,6 +195,7 @@ All logs are stored as JSONL in `~/.applogs/logs/`:
 |------|----------|
 | `shell-commands.jsonl` | Every terminal command with cwd, exit code, duration |
 | `chrome-events.jsonl` | Tab focus/blur, navigation, page loads |
+| `office-events.jsonl` | Office app launch/quit, doc open/close/focus, saves |
 
 You can inspect them directly:
 
@@ -189,5 +234,6 @@ If you want to stop collecting logs:
 ```bash
 ./applogs uninstall shell
 ./applogs uninstall chrome
+./applogs uninstall office
 rm -rf ~/.applogs
 ```

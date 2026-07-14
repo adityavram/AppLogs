@@ -19,6 +19,7 @@ AppLogs is a tool that logs meaningful actions you take on your laptop — prima
 # Or install individually
 ./applogs install shell
 ./applogs install chrome
+./applogs install office
 
 # Check what's active
 ./applogs status
@@ -95,8 +96,8 @@ See `integrations/office/README.md` for details.
 
 | Command | Description |
 |---------|-------------|
-| `applogs install <chrome\|shell\|all>` | Install an integration |
-| `applogs uninstall <chrome\|shell\|all>` | Uninstall an integration |
+| `applogs install <chrome\|shell\|office\|all>` | Install an integration |
+| `applogs uninstall <chrome\|shell\|office\|all>` | Uninstall an integration |
 | `applogs status` | Show active integrations and log stats |
 | `applogs query [options]` | Query/filter logs |
 | `applogs timeline [options]` | Chronological activity view |
@@ -105,7 +106,7 @@ See `integrations/office/README.md` for details.
 
 ### Query Options
 
-- `--source <chrome\|shell\|all>` - Filter by source
+- `--source <chrome\|shell\|office\|all>` - Filter by source
 - `--type <type>` - Filter by event type
 - `--today` - Only today's logs
 - `--since YYYY-MM-DD` - Logs since date
@@ -118,6 +119,7 @@ All logs are stored as JSONL in `~/.applogs/logs/`:
 
 - `shell-commands.jsonl` - Shell command logs
 - `chrome-events.jsonl` - Chrome activity logs
+- `office-events.jsonl` - Office app activity logs
 
 See `schema/README.md` for the full schema.
 
@@ -131,7 +133,7 @@ See `schema/README.md` for the full schema.
 ## Future
 
 - Desktop app with local UI for visualizing behavior
-- Additional integrations (IDE, email, calendar)
+- Additional integrations (IDE, email, calendar, Slack)
 - Pattern detection and workflow analysis
 - Optional sync/export for cross-device analysis
 
