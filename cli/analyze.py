@@ -19,6 +19,9 @@ def analyze_logs(logs):
         'top_sites': Counter(),
         'time_per_site': defaultdict(int),
         'failed_commands': [],
+        'office_apps': Counter(),
+        'office_docs': Counter(),
+        'office_saves': [],
         'date_range': None,
     }
     
@@ -69,6 +72,21 @@ def analyze_logs(logs):
                 analysis['top_sites'][domain] += 1
                 if event_type == 'tab_blur' and duration:
                     analysis['time_per_site'][domain] += duration
+        
+        elif source == 'office':
+            app = log.get('app', '?')
+            doc = log.get('doc_name', '')
+            
+            analysis['office_apps'][app] += 1
+            if doc:
+                analysis['office_docs'][f'{app}: {doc}'] += 1
+            
+            if event_type == 'doc_save':
+                analysis['office_saves'].append({
+                    'app': app,
+                    'doc': doc,
+                    'timestamp': ts[:19],
+                })
     
     if timestamps:
         analysis['date_range'] = (min(timestamps)[:10], max(timestamps)[:10])
@@ -151,6 +169,27 @@ def print_analysis(analysis):
         print(f'Failed Commands ({len(analysis["failed_commands"])}):')
         for fail in analysis['failed_commands'][-10:]:
             print(f'  [{fail["exit_code"]}] {fail["command"]}  ({fail["timestamp"]})')
+        print()
+    
+    # Office apps
+    if analysis['office_apps']:
+        print('Office App Activity:')
+        for app, count in analysis['office_apps'].most_common():
+            print(f'  {count:5d}  {app}')
+        print()
+    
+    # Office documents
+    if analysis['office_docs']:
+        print('Most Active Documents:')
+        for doc, count in analysis['office_docs'].most_common(15):
+            print(f'  {count:5d}  {doc}')
+        print()
+    
+    # Office saves
+    if analysis['office_saves']:
+        print(f'Document Saves ({len(analysis["office_saves"])}):')
+        for save in analysis['office_saves'][-10:]:
+            print(f'  {save["app"]:10s}  {save["doc"]:30s}  ({save["timestamp"]})')
         print()
 
 

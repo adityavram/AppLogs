@@ -60,6 +60,11 @@ applogs/
 │       ├── applogs.sh
 │       ├── install.sh
 │       └── README.md
+│   └── office/              # Office daemon (Word, PowerPoint, Excel)
+│       ├── daemon.py
+│       ├── install.sh
+│       ├── uninstall.sh
+│       └── README.md
 ├── schema/                  # Shared log schema documentation
 │   └── README.md
 ├── logs/                    # Default log location (also ~/.applogs/logs/)
@@ -79,6 +84,12 @@ Supports bash and zsh. See `integrations/shell/README.md` for details.
 Logs browser activity: tab focus/blur with duration, navigation, page loads. Uses native messaging to write logs directly to disk — no manual export needed.
 
 See `integrations/chrome/README.md` for details.
+
+### Office (`integrations/office/`)
+
+Logs Microsoft Word, PowerPoint, and Excel: app launch/quit, document open/close/focus, and saves. Runs as a macOS LaunchAgent daemon using AppleScript.
+
+See `integrations/office/README.md` for details.
 
 ## CLI Commands
 

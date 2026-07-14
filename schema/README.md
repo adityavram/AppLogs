@@ -68,3 +68,42 @@ New integrations should:
 2. Include `timestamp` and `type` fields
 3. Document their event types here
 4. Include a `README.md` in their integration directory
+
+### Office Events (`office-events.jsonl`)
+
+#### `app_launch` / `app_quit`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `app` | string | App key: `word`, `powerpoint`, or `excel` |
+| `bundle_name` | string | Full app name (e.g. `Microsoft Word`) |
+
+#### `app_focus` / `app_blur`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `app` | string | App key |
+| `bundle_name` | string | Full app name |
+
+#### `doc_open` / `doc_close`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `app` | string | App key |
+| `doc_name` | string | Document name |
+| `doc_path` | string | Full file path (on open only) |
+
+#### `doc_focus`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `app` | string | App key |
+| `doc_name` | string | Document name |
+
+#### `doc_save`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `app` | string | App key |
+| `doc_name` | string | Document name |
+| `doc_path` | string | Full file path |

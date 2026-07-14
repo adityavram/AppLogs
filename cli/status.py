@@ -1,5 +1,6 @@
 """Show integration status and log statistics."""
 
+import subprocess
 from pathlib import Path
 from query import load_logs, SOURCE_FILES
 import json
@@ -33,6 +34,17 @@ def show_status():
     if chrome_logs:
         last = chrome_logs[-1]
         print(f'    Last: {last.get("timestamp", "?")[:19]}  {last.get("type", "?")}  {last.get("url", "?")[:40]}')
+    print()
+    
+    # Check office integration
+    office_logs = load_logs(source='office')
+    launchctl = subprocess.run(['launchctl', 'list'], capture_output=True, text=True)
+    office_daemon = 'com.applogs.office' in launchctl.stdout if launchctl.returncode == 0 else False
+    print(f'  Office Integration: {"ACTIVE" if office_daemon else "NOT INSTALLED"}')
+    print(f'    Logs: {len(office_logs)} entries')
+    if office_logs:
+        last = office_logs[-1]
+        print(f'    Last: {last.get("timestamp", "?")[:19]}  {last.get("type", "?")}  {last.get("app", "?")}')
     print()
     
     # Log directory

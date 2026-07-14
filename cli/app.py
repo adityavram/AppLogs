@@ -24,11 +24,11 @@ def main():
     
     # install
     install_parser = subparsers.add_parser('install', help='Install an integration')
-    install_parser.add_argument('integration', choices=['chrome', 'shell', 'all'], help='Which integration to install')
+    install_parser.add_argument('integration', choices=['chrome', 'shell', 'office', 'all'], help='Which integration to install')
     
     # uninstall
     uninstall_parser = subparsers.add_parser('uninstall', help='Uninstall an integration')
-    uninstall_parser.add_argument('integration', choices=['chrome', 'shell', 'all'], help='Which integration to uninstall')
+    uninstall_parser.add_argument('integration', choices=['chrome', 'shell', 'office', 'all'], help='Which integration to uninstall')
     
     # import-chrome
     import_parser = subparsers.add_parser('import-chrome', help='Import Chrome logs from Downloads')
@@ -39,7 +39,7 @@ def main():
     
     # query
     query_parser = subparsers.add_parser('query', help='Query logs')
-    query_parser.add_argument('--source', choices=['chrome', 'shell', 'all'], default='all', help='Filter by source')
+    query_parser.add_argument('--source', choices=['chrome', 'shell', 'office', 'all'], default='all', help='Filter by source')
     query_parser.add_argument('--type', help='Filter by event type (e.g. shell_command, tab_focus)')
     query_parser.add_argument('--today', action='store_true', help='Only today\'s logs')
     query_parser.add_argument('--since', help='Logs since (YYYY-MM-DD)')
@@ -56,7 +56,7 @@ def main():
     analyze_parser = subparsers.add_parser('analyze', help='Show behavioral insights')
     analyze_parser.add_argument('--today', action='store_true', help='Only today')
     analyze_parser.add_argument('--since', help='Logs since (YYYY-MM-DD)')
-    analyze_parser.add_argument('--source', choices=['chrome', 'shell', 'all'], default='all', help='Filter by source')
+    analyze_parser.add_argument('--source', choices=['chrome', 'shell', 'office', 'all'], default='all', help='Filter by source')
     
     args = parser.parse_args()
     

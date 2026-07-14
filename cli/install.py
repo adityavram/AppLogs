@@ -9,7 +9,8 @@ def install_integration(name, project_root):
     if name == 'all':
         chrome_rc = install_integration('chrome', project_root)
         shell_rc = install_integration('shell', project_root)
-        return chrome_rc or shell_rc
+        office_rc = install_integration('office', project_root)
+        return chrome_rc or shell_rc or office_rc
     
     integration_dir = project_root / 'integrations' / name
     install_script = integration_dir / 'install.sh'
@@ -35,6 +36,7 @@ def uninstall_integration(name):
     if name == 'all':
         uninstall_integration('shell')
         uninstall_integration('chrome')
+        uninstall_integration('office')
         return 0
     
     if name == 'shell':
@@ -60,6 +62,19 @@ def uninstall_integration(name):
         print('  1. Open chrome://extensions/')
         print('  2. Find "AppLogs Chrome Collector"')
         print('  3. Click Remove')
+        print('  4. Remove native host manifest:')
+        print(f'     rm ~/Library/Application\\ Support/Google/Chrome/NativeMessagingHosts/com.applogs.chrome.json')
+        return 0
+    
+    if name == 'office':
+        import shutil
+        plist_file = Path.home() / 'Library' / 'LaunchAgents' / 'com.applogs.office.plist'
+        if plist_file.exists():
+            subprocess.run(['launchctl', 'unload', str(plist_file)], capture_output=True)
+            plist_file.unlink()
+            print('Stopped and removed AppLogs Office daemon.')
+        else:
+            print('AppLogs Office integration not installed.')
         return 0
     
     print(f'Unknown integration: {name}')

@@ -53,6 +53,25 @@ def show_timeline(today=False, since=None, limit=100):
             elif event_type in ('tab_focus', 'navigation'):
                 domain = _extract_domain(url)
                 print(f'  {log_time}  [>] {domain or title[:40]}')
+        elif source == 'office':
+            app = log.get('app', '?')
+            doc = log.get('doc_name', '')
+            if event_type == 'app_focus':
+                print(f'  {log_time}  [W] {app}')
+            elif event_type == 'app_blur':
+                print(f'  {log_time}  [ ] {app}')
+            elif event_type == 'doc_open':
+                print(f'  {log_time}  [+] {app}: {doc}')
+            elif event_type == 'doc_close':
+                print(f'  {log_time}  [-] {app}: {doc}')
+            elif event_type == 'doc_focus':
+                print(f'  {log_time}  [W] {app}: {doc}')
+            elif event_type == 'doc_save':
+                print(f'  {log_time}  [S] {app}: {doc}')
+            elif event_type == 'app_launch':
+                print(f'  {log_time}  [L] {app} launched')
+            elif event_type == 'app_quit':
+                print(f'  {log_time}  [Q] {app} quit')
     
     print(f'\n{len(logs)} events shown')
     return 0

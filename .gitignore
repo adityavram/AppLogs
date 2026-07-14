@@ -9,3 +9,5 @@ integrations/chrome/native_host_wrapper.sh
 .DS_Store
 __pycache__/
 *.pyc
+.Rhistory
+*.Rhistory
