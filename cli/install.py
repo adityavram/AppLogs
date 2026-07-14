@@ -8,9 +8,10 @@ from pathlib import Path
 def install_integration(name, project_root):
     if name == 'all':
         chrome_rc = install_integration('chrome', project_root)
+        safari_rc = install_integration('safari', project_root)
         shell_rc = install_integration('shell', project_root)
         office_rc = install_integration('office', project_root)
-        return chrome_rc or shell_rc or office_rc
+        return chrome_rc or safari_rc or shell_rc or office_rc
     
     integration_dir = project_root / 'integrations' / name
     install_script = integration_dir / 'install.sh'
@@ -36,6 +37,7 @@ def uninstall_integration(name):
     if name == 'all':
         uninstall_integration('shell')
         uninstall_integration('chrome')
+        uninstall_integration('safari')
         uninstall_integration('office')
         return 0
     
@@ -75,6 +77,16 @@ def uninstall_integration(name):
             print('Stopped and removed AppLogs Office daemon.')
         else:
             print('AppLogs Office integration not installed.')
+        return 0
+    
+    if name == 'safari':
+        plist_file = Path.home() / 'Library' / 'LaunchAgents' / 'com.applogs.safari.plist'
+        if plist_file.exists():
+            subprocess.run(['launchctl', 'unload', str(plist_file)], capture_output=True)
+            plist_file.unlink()
+            print('Stopped and removed AppLogs Safari daemon.')
+        else:
+            print('AppLogs Safari integration not installed.')
         return 0
     
     print(f'Unknown integration: {name}')

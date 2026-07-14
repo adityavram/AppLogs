@@ -73,6 +73,16 @@ def analyze_logs(logs):
                 if event_type == 'tab_blur' and duration:
                     analysis['time_per_site'][domain] += duration
         
+        elif source == 'safari':
+            url = log.get('url', '')
+            duration = log.get('duration_s', 0)
+            
+            domain = _extract_domain(url)
+            if domain:
+                analysis['top_sites'][domain] += 1
+                if event_type == 'app_blur' and duration:
+                    analysis['time_per_site'][domain] += int(duration * 1000)
+        
         elif source == 'office':
             app = log.get('app', '?')
             doc = log.get('doc_name', '')

@@ -19,6 +19,7 @@ AppLogs is a tool that logs meaningful actions you take on your laptop — prima
 # Or install individually
 ./applogs install shell
 ./applogs install chrome
+./applogs install safari
 ./applogs install office
 
 # Check what's active
@@ -57,7 +58,12 @@ applogs/
 │   │   ├── setup_native_host.sh
 │   │   ├── install.sh
 │   │   └── README.md
-│   └── shell/               # Shell hooks (bash/zsh)
+│   ├── safari/              # Safari daemon (AppleScript-based)
+│   │   ├── daemon.py
+│   │   ├── install.sh
+│   │   ├── uninstall.sh
+│   │   └── README.md
+│   ├── shell/               # Shell hooks (bash/zsh)
 │       ├── applogs.sh
 │       ├── install.sh
 │       └── README.md
@@ -86,6 +92,12 @@ Logs browser activity: tab focus/blur with duration, navigation, page loads. Use
 
 See `integrations/chrome/README.md` for details.
 
+### Safari (`integrations/safari/`)
+
+Logs Safari browsing activity: navigation, tab focus, app focus/blur with duration. Runs as a macOS LaunchAgent daemon using AppleScript — no extension required.
+
+See `integrations/safari/README.md` for details.
+
 ### Office (`integrations/office/`)
 
 Logs Microsoft Word, PowerPoint, and Excel: app launch/quit, document open/close/focus, and saves. Runs as a macOS LaunchAgent daemon using AppleScript.
@@ -96,8 +108,8 @@ See `integrations/office/README.md` for details.
 
 | Command | Description |
 |---------|-------------|
-| `applogs install <chrome\|shell\|office\|all>` | Install an integration |
-| `applogs uninstall <chrome\|shell\|office\|all>` | Uninstall an integration |
+| `applogs install <chrome\|safari\|shell\|office\|all>` | Install an integration |
+| `applogs uninstall <chrome\|safari\|shell\|office\|all>` | Uninstall an integration |
 | `applogs status` | Show active integrations and log stats |
 | `applogs query [options]` | Query/filter logs |
 | `applogs timeline [options]` | Chronological activity view |
@@ -106,7 +118,7 @@ See `integrations/office/README.md` for details.
 
 ### Query Options
 
-- `--source <chrome\|shell\|office\|all>` - Filter by source
+- `--source <chrome\|safari\|shell\|office\|all>` - Filter by source
 - `--type <type>` - Filter by event type
 - `--today` - Only today's logs
 - `--since YYYY-MM-DD` - Logs since date
@@ -119,6 +131,7 @@ All logs are stored as JSONL in `~/.applogs/logs/`:
 
 - `shell-commands.jsonl` - Shell command logs
 - `chrome-events.jsonl` - Chrome activity logs
+- `safari-events.jsonl` - Safari activity logs
 - `office-events.jsonl` - Office app activity logs
 
 See `schema/README.md` for the full schema.

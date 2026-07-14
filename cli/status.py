@@ -36,10 +36,23 @@ def show_status():
         print(f'    Last: {last.get("timestamp", "?")[:19]}  {last.get("type", "?")}  {last.get("url", "?")[:40]}')
     print()
     
+    # Check launch agents for safari and office
+    launchctl_result = subprocess.run(['launchctl', 'list'], capture_output=True, text=True)
+    launchctl_out = launchctl_result.stdout if launchctl_result.returncode == 0 else ''
+    
+    # Check safari integration
+    safari_logs = load_logs(source='safari')
+    safari_daemon = 'com.applogs.safari' in launchctl_out
+    print(f'  Safari Integration: {"ACTIVE" if safari_daemon else "NOT INSTALLED"}')
+    print(f'    Logs: {len(safari_logs)} entries')
+    if safari_logs:
+        last = safari_logs[-1]
+        print(f'    Last: {last.get("timestamp", "?")[:19]}  {last.get("type", "?")}  {last.get("url", "?")[:40]}')
+    print()
+    
     # Check office integration
     office_logs = load_logs(source='office')
-    launchctl = subprocess.run(['launchctl', 'list'], capture_output=True, text=True)
-    office_daemon = 'com.applogs.office' in launchctl.stdout if launchctl.returncode == 0 else False
+    office_daemon = 'com.applogs.office' in launchctl_out
     print(f'  Office Integration: {"ACTIVE" if office_daemon else "NOT INSTALLED"}')
     print(f'    Logs: {len(office_logs)} entries')
     if office_logs:

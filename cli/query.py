@@ -11,6 +11,7 @@ LOG_DIR = Path.home() / '.applogs' / 'logs'
 SOURCE_FILES = {
     'shell': 'shell-commands.jsonl',
     'chrome': 'chrome-events.jsonl',
+    'safari': 'safari-events.jsonl',
     'office': 'office-events.jsonl',
 }
 
@@ -98,6 +99,10 @@ def print_logs(logs):
             doc = log.get('doc_name', '')
             detail = f'app={app} doc={doc!r}' if doc else f'app={app}'
             print(f'  {timestamp}  [{source}] {event_type:15s}  {detail}')
+        elif source == 'safari':
+            url = log.get('url', '?')[:50]
+            title = log.get('title', '')[:30]
+            print(f'  {timestamp}  [{source}] {event_type:15s}  url={url!r}  title={title!r}')
         else:
             print(f'  {timestamp}  [{source}] {event_type:15s}  {json.dumps(log)[:80]}')
     

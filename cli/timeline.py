@@ -53,6 +53,24 @@ def show_timeline(today=False, since=None, limit=100):
             elif event_type in ('tab_focus', 'navigation'):
                 domain = _extract_domain(url)
                 print(f'  {log_time}  [>] {domain or title[:40]}')
+        elif source == 'safari':
+            url = log.get('url', '?')
+            title = log.get('title', '')
+            duration = log.get('duration_s')
+            
+            if event_type == 'app_blur' and duration:
+                if duration > 60:
+                    time_str = f'{int(duration // 60)}m{int(duration % 60)}s'
+                else:
+                    time_str = f'{duration:.0f}s'
+                print(f'  {log_time}  [~] Safari                                    ({time_str})')
+            elif event_type in ('tab_focus', 'navigation'):
+                domain = _extract_domain(url)
+                print(f'  {log_time}  [>] {domain or title[:40]}')
+            elif event_type == 'app_launch':
+                print(f'  {log_time}  [L] Safari launched')
+            elif event_type == 'app_quit':
+                print(f'  {log_time}  [Q] Safari quit')
         elif source == 'office':
             app = log.get('app', '?')
             doc = log.get('doc_name', '')

@@ -5,7 +5,8 @@ This guide walks you through installing AppLogs from scratch. It takes about 5 m
 ## Prerequisites
 
 - macOS
-- Google Chrome
+- Google Chrome (optional, for Chrome integration)
+- Safari (optional, for Safari integration)
 - Python 3 (pre-installed on macOS)
 - Bash or Zsh (default on macOS)
 - Microsoft Office (optional, for Office integration)
@@ -92,7 +93,33 @@ tail -3 ~/.applogs/logs/chrome-events.jsonl | jq .
 
 You should see entries for the pages you visited.
 
-## Step 4: Install the Office Integration (Optional)
+## Step 4: Install the Safari Integration (Optional)
+
+The Safari integration logs your browsing activity in Safari — navigation, tab focus, and app focus/blur with duration. Uses AppleScript, no extension required.
+
+```bash
+cd ~/AppLogs
+./applogs install safari
+```
+
+This will:
+- Install a macOS LaunchAgent that runs the daemon on login
+- Start the daemon immediately
+
+**macOS will prompt you to grant automation permissions.** Click **OK** to allow AppLogs to query Safari via AppleScript.
+
+**Verify it works:**
+
+1. Open Safari and browse to a few pages
+2. Check the logs:
+
+```bash
+tail -3 ~/.applogs/logs/safari-events.jsonl | jq .
+```
+
+You should see navigation and tab focus events.
+
+## Step 5: Install the Office Integration (Optional)
 
 The Office integration logs activity in Microsoft Word, PowerPoint, and Excel — document opens, closes, focus changes, and saves.
 
@@ -131,7 +158,7 @@ python3 ~/AppLogs/integrations/office/daemon.py
 
 Press Ctrl+C to stop.
 
-## Step 5: Verify Everything Works
+## Step 6: Verify Everything Works
 
 Run the status check:
 
@@ -151,7 +178,7 @@ Run a combined analysis:
 
 You should see your terminal commands, browser activity, and Office events merged into a single timeline.
 
-## Step 6: Pin the Chrome Extension (Recommended)
+## Step 7: Pin the Chrome Extension (Recommended)
 
 To make the AppLogs icon always visible:
 
@@ -228,6 +255,23 @@ brew install jq
    python3 ~/AppLogs/integrations/office/daemon.py
    ```
    Open an Office app and watch for log output in the terminal.
+
+### Safari integration not logging
+
+1. Check the daemon is running:
+   ```bash
+   launchctl list | grep applogs
+   ```
+2. Check the log:
+   ```bash
+   cat /tmp/applogs-safari.log
+   ```
+3. Grant automation permissions in **System Settings → Privacy & Security → Automation**. Allow Python/Terminal to control Safari.
+4. Test manually:
+   ```bash
+   python3 ~/AppLogs/integrations/safari/daemon.py
+   ```
+   Open Safari and browse to a page — watch for log output.
 
 ## Next Steps
 

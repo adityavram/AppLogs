@@ -69,6 +69,43 @@ New integrations should:
 3. Document their event types here
 4. Include a `README.md` in their integration directory
 
+### Safari Events (`safari-events.jsonl`)
+
+#### `app_launch` / `app_quit`
+
+No additional fields.
+
+#### `app_focus`
+
+No additional fields.
+
+#### `app_blur`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `duration_s` | float | Seconds Safari was focused before blur |
+
+#### `tab_focus`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `url` | string | URL of the focused tab |
+| `title` | string | Page title |
+
+#### `navigation`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `url` | string | Navigated URL |
+| `title` | string | Page title |
+| `from_url` | string | Previous URL |
+
+#### `tab_open` / `tab_close`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `tab_count` | int | Total open tabs after change |
+
 ### Office Events (`office-events.jsonl`)
 
 #### `app_launch` / `app_quit`

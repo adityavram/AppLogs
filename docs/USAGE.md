@@ -194,7 +194,8 @@ All logs are stored as JSONL in `~/.applogs/logs/`:
 | File | Contents |
 |------|----------|
 | `shell-commands.jsonl` | Every terminal command with cwd, exit code, duration |
-| `chrome-events.jsonl` | Tab focus/blur, navigation, page loads |
+| `chrome-events.jsonl` | Chrome tab focus/blur, navigation, page loads |
+| `safari-events.jsonl` | Safari navigation, tab focus, app focus/blur |
 | `office-events.jsonl` | Office app launch/quit, doc open/close/focus, saves |
 
 You can inspect them directly:
@@ -234,6 +235,7 @@ If you want to stop collecting logs:
 ```bash
 ./applogs uninstall shell
 ./applogs uninstall chrome
+./applogs uninstall safari
 ./applogs uninstall office
 rm -rf ~/.applogs
 ```
