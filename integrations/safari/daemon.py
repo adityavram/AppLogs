@@ -120,6 +120,7 @@ class SafariMonitor:
         self.last_title = None
         self.focus_since = None
         self.last_tab_count = 0
+        self.logged_blur = False
 
     def signal_handler(self, signum, frame):
         self.running = False
@@ -161,12 +162,12 @@ class SafariMonitor:
         if not running:
             return
 
-        # Check tab count for open/close (only log meaningful changes)
+        # Check tab count for open/close (only log meaningful changes, skip Start Page)
         tab_count = get_tab_count()
-        if tab_count != self.last_tab_count and self.last_tab_count > 0:
-            if tab_count > self.last_tab_count:
+        if tab_count != self.last_tab_count:
+            if tab_count > self.last_tab_count and self.last_tab_count > 0:
                 log_event({'type': 'tab_open', 'tab_count': tab_count})
-            elif tab_count < self.last_tab_count:
+            elif tab_count < self.last_tab_count and tab_count > 0:
                 log_event({'type': 'tab_close', 'tab_count': tab_count})
         self.last_tab_count = tab_count
 
@@ -175,8 +176,9 @@ class SafariMonitor:
 
         if frontmost and not self.was_frontmost:
             self.focus_since = time.time()
+            self.logged_blur = False
             log_event({'type': 'app_focus'})
-        elif not frontmost and self.was_frontmost:
+        elif not frontmost and self.was_frontmost and not self.logged_blur:
             focus_duration = time.time() - (self.focus_since or time.time())
             if focus_duration >= 3:
                 log_event({
@@ -184,6 +186,7 @@ class SafariMonitor:
                     'duration_s': round(focus_duration, 1),
                 })
             self.focus_since = None
+            self.logged_blur = True
 
         self.was_frontmost = frontmost
 
