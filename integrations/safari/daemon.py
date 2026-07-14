@@ -79,10 +79,13 @@ def get_active_tab():
     parts = result.split('\n', 1)
     url = parts[0] if len(parts) > 0 else ''
     title = parts[1] if len(parts) > 1 else ''
-    if url == 'missing value':
-        url = ''
-    if title == 'missing value':
+    
+    # Filter out missing value and empty/special URLs
+    if 'missing value' in url or url == 'favorites://' or url == '':
+        url = None
+    if 'missing value' in title:
         title = ''
+    
     return url, title
 
 
@@ -158,14 +161,14 @@ class SafariMonitor:
         if not running:
             return
 
-        # Check tab count for open/close
+        # Check tab count for open/close (only log meaningful changes)
         tab_count = get_tab_count()
-        if tab_count != self.last_tab_count:
+        if tab_count != self.last_tab_count and self.last_tab_count > 0:
             if tab_count > self.last_tab_count:
                 log_event({'type': 'tab_open', 'tab_count': tab_count})
             elif tab_count < self.last_tab_count:
                 log_event({'type': 'tab_close', 'tab_count': tab_count})
-            self.last_tab_count = tab_count
+        self.last_tab_count = tab_count
 
         # Check frontmost status
         frontmost = is_frontmost()
@@ -203,7 +206,7 @@ class SafariMonitor:
                     })
                 self.last_url = url
                 self.last_title = title
-            elif title and title != self.last_title:
+            elif title and title != self.last_title and url:
                 self.last_title = title
 
 
