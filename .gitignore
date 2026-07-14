@@ -1,0 +1,11 @@
+# Logs (local runtime data)
+logs/
+*.jsonl
+
+# Chrome extension build artifacts
+integrations/chrome/native_host_wrapper.sh
+
+# OS files
+.DS_Store
+__pycache__/
+*.pyc

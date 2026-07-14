@@ -1,0 +1,9 @@
+{
+  "name": "com.applogs.chrome",
+  "description": "AppLogs Chrome native messaging host",
+  "path": "{{HOST_PATH}}",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://{{EXTENSION_ID}}/"
+  ]
+}

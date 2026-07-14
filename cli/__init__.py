@@ -1,0 +1,1 @@
+"""AppLogs CLI package."""

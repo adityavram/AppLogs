@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "AppLogs Chrome Collector",
+  "version": "0.1.0",
+  "description": "Collect semantic browsing actions for AppLogs",
+  "permissions": [
+    "history",
+    "tabs",
+    "webNavigation",
+    "storage",
+    "downloads",
+    "nativeMessaging"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_end"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "AppLogs"
+  }
+}
