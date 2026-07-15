@@ -11,13 +11,33 @@ applogs_write_log() {
   local cwd="$2"
   local exit_code="$3"
   local duration="$4"
+  local output_first="$5"
+  local output_last="$6"
   
   local timestamp=$(python3 -c "from datetime import datetime,timezone; print(datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3]+'Z')" 2>/dev/null || date -u +"%Y-%m-%dT%H:%M:%S.000Z")
   local safe_cmd=$(printf '%s' "$cmd" | sed 's/\\/\\\\/g; s/"/\\"/g' | tr '\n' ' ')
   local safe_cwd=$(printf '%s' "$cwd" | sed 's/\\/\\\\/g; s/"/\\"/g')
   
-  printf '{"timestamp":"%s","type":"shell_command","command":"%s","cwd":"%s","exit_code":%s,"duration_ms":%s,"shell":"%s","session_id":"%s","hostname":"%s"}\n' \
-    "$timestamp" "$safe_cmd" "$safe_cwd" "$exit_code" "$duration" "${SHELL##*/}" "$APPLOGS_SESSION_ID" "$(hostname)" >> "$APPLOGS_LOG_FILE"
+  if [ -n "$output_first" ]; then
+    local safe_first=$(printf '%s' "$output_first" | sed 's/\\/\\\\/g; s/"/\\"/g' | tr '\n' ' ' | cut -c1-200)
+    local safe_last=$(printf '%s' "$output_last" | sed 's/\\/\\\\/g; s/"/\\"/g' | tr '\n' ' ' | cut -c1-200)
+    printf '{"timestamp":"%s","type":"shell_command","command":"%s","cwd":"%s","exit_code":%s,"duration_ms":%s,"shell":"%s","session_id":"%s","hostname":"%s","output_first":"%s","output_last":"%s"}\n' \
+      "$timestamp" "$safe_cmd" "$safe_cwd" "$exit_code" "$duration" "${SHELL##*/}" "$APPLOGS_SESSION_ID" "$(hostname)" "$safe_first" "$safe_last" >> "$APPLOGS_LOG_FILE"
+  else
+    printf '{"timestamp":"%s","type":"shell_command","command":"%s","cwd":"%s","exit_code":%s,"duration_ms":%s,"shell":"%s","session_id":"%s","hostname":"%s"}\n' \
+      "$timestamp" "$safe_cmd" "$safe_cwd" "$exit_code" "$duration" "${SHELL##*/}" "$APPLOGS_SESSION_ID" "$(hostname)" >> "$APPLOGS_LOG_FILE"
+  fi
+}
+
+applogs_capture_output() {
+  local tmpfile=$(mktemp /tmp/applogs_output.XXXXXX)
+  APPLOGS_OUTPUT_TMP="$tmpfile"
+  "$@" 2>&1 | tee "$tmpfile"
+  local rc=${PIPESTATUS[0]}
+  APPLOGS_OUTPUT_FIRST=$(head -2 "$tmpfile" 2>/dev/null)
+  APPLOGS_OUTPUT_LAST=$(tail -2 "$tmpfile" 2>/dev/null)
+  rm -f "$tmpfile" 2>/dev/null
+  return $rc
 }
 
 if [ -n "$BASH_VERSION" ]; then

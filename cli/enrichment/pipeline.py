@@ -36,6 +36,89 @@ UNDO_PATTERNS = [
     r'^undo$',
 ]
 
+PAGE_CATEGORIES = {
+    'search': [
+        r'google\.com/search',
+        r'duckduckgo\.com',
+        r'bing\.com/search',
+        r'search\.yahoo\.com',
+    ],
+    'social': [
+        r'twitter\.com', r'x\.com',
+        r'facebook\.com',
+        r'linkedin\.com',
+        r'reddit\.com',
+        r'instagram\.com',
+    ],
+    'code': [
+        r'github\.com',
+        r'gitlab\.com',
+        r'stackoverflow\.com',
+        r'codepen\.io',
+        r'replit\.com',
+    ],
+    'docs': [
+        r'docs\.google\.com',
+        r'docs\.microsoft\.com',
+        r'readthedocs\.io',
+        r'notion\.so',
+        r'confluence\.atlassian\.com',
+    ],
+    'video': [
+        r'youtube\.com',
+        r'vimeo\.com',
+        r'twitch\.tv',
+    ],
+    'ai': [
+        r'chatgpt\.com',
+        r'chat\.openai\.com',
+        r'claude\.ai',
+        r'ollama\.com',
+        r'huggingface\.co',
+    ],
+    'email': [
+        r'mail\.google\.com',
+        r'outlook\.office\.com',
+        r'outlook\.live\.com',
+    ],
+    'shopping': [
+        r'amazon\.com',
+        r'ebay\.com',
+        r'shopify\.com',
+    ],
+    'news': [
+        r'news\.ycombinator\.com',
+        r'cnn\.com',
+        r'bbc\.com',
+        r'nytimes\.com',
+        r'theverge\.com',
+    ],
+    'productivity': [
+        r'wisprflow\.ai',
+        r'figma\.com',
+        r'trello\.com',
+        r'asana\.com',
+        r'slack\.com',
+        r'notion\.so',
+    ],
+}
+
+CROSS_SOURCE_WINDOW_SECONDS = 30
+
+
+def classify_page(url):
+    """Classify a URL into a page category."""
+    if not url:
+        return None
+    if url.startswith('chrome://') or url.startswith('favorites://'):
+        return 'internal'
+    
+    for category, patterns in PAGE_CATEGORIES.items():
+        for pattern in patterns:
+            if re.search(pattern, url, re.IGNORECASE):
+                return category
+    return 'other'
+
 
 def load_all_raw_logs():
     """Load and merge all raw logs, sorted by timestamp."""
@@ -222,6 +305,78 @@ def get_next_action_delay(entry, future_actions):
     return round(delta, 2)
 
 
+def find_cross_source_context(entry, all_logs, index):
+    """Find related events from other sources within a time window."""
+    ts = parse_timestamp(entry.get('timestamp'))
+    if not ts:
+        return []
+    
+    entry_source = entry.get('_source', '?')
+    related = []
+    
+    # Look backwards for context from other sources
+    for i in range(max(0, index - 20), index):
+        other = all_logs[i]
+        if other.get('_source') == entry_source:
+            continue
+        other_ts = parse_timestamp(other.get('timestamp'))
+        if not other_ts:
+            continue
+        delta = (ts - other_ts).total_seconds()
+        if delta <= CROSS_SOURCE_WINDOW_SECONDS and delta >= 0:
+            related.append({
+                'source': other.get('_source'),
+                'type': other.get('type'),
+                'summary': extract_action_summary(other),
+                'seconds_before': round(delta, 1),
+            })
+    
+    return related[-5:]  # last 5 cross-source events
+
+
+def build_screen_state(recent_actions):
+    """Build a snapshot of what's on screen from recent actions."""
+    state = {}
+    
+    # Most recent browser activity
+    for action in reversed(recent_actions):
+        source = action.get('_source')
+        if source in ('chrome', 'safari'):
+            url = action.get('url', '')
+            title = action.get('title', '')
+            if url and not url.startswith('chrome://') and not url.startswith('favorites://'):
+                state['browser'] = {
+                    'url': url,
+                    'title': title,
+                    'domain': extract_domain(url),
+                    'category': classify_page(url),
+                }
+                break
+    
+    # Most recent office activity
+    for action in reversed(recent_actions):
+        if action.get('_source') == 'office':
+            app = action.get('app', '')
+            doc = action.get('doc_name', '')
+            if app and doc:
+                state['office'] = {
+                    'app': app,
+                    'document': doc,
+                }
+                break
+    
+    # Most recent terminal state
+    for action in reversed(recent_actions):
+        if action.get('_source') == 'shell':
+            state['terminal'] = {
+                'cwd': action.get('cwd', ''),
+                'last_command': action.get('command', ''),
+            }
+            break
+    
+    return state
+
+
 def assign_workflow_ids(logs):
     """Assign workflow IDs by clustering actions within WORKFLOW_GAP_SECONDS."""
     workflow_id = 0
@@ -275,7 +430,15 @@ def enrich_logs():
             'focused_app': infer_focused_app(entry, recent_window),
             'time_features': extract_time_features(entry.get('timestamp')),
             'workflow_id': entry.get('_workflow_id'),
+            'cross_source': find_cross_source_context(entry, logs, i),
+            'screen_state': build_screen_state(recent_window),
         }
+        
+        # Add page category for browser events
+        if entry.get('_source') in ('chrome', 'safari'):
+            url = entry.get('url', '')
+            if url:
+                context['page_category'] = classify_page(url)
         
         # Build outcome
         outcome = {
@@ -297,7 +460,9 @@ def enrich_logs():
         }
         
         # Preserve source-specific fields
-        for key in ('command', 'cwd', 'url', 'title', 'app', 'doc_name', 'doc_path', 'from_url', 'duration_ms', 'duration_s', 'exit_code'):
+        for key in ('command', 'cwd', 'url', 'title', 'app', 'doc_name', 'doc_path', 
+                     'from_url', 'duration_ms', 'duration_s', 'exit_code',
+                     'output_first', 'output_last'):
             if key in entry:
                 enriched_entry[key] = entry[key]
         
