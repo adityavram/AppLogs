@@ -2,6 +2,9 @@
 logs/
 *.jsonl
 
+# Local mission file (not committed)
+MISSION.md
+
 # Chrome extension build artifacts
 integrations/chrome/native_host_wrapper.sh
 

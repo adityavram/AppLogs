@@ -12,6 +12,7 @@ from analyze import analyze_logs, print_analysis
 from status import show_status
 from timeline import show_timeline
 from importer import import_chrome_logs
+from enrichment.pipeline import enrich_logs
 
 
 def main():
@@ -58,6 +59,9 @@ def main():
     analyze_parser.add_argument('--since', help='Logs since (YYYY-MM-DD)')
     analyze_parser.add_argument('--source', choices=['chrome', 'safari', 'shell', 'office', 'all'], default='all', help='Filter by source')
     
+    # enrich
+    subparsers.add_parser('enrich', help='Run enrichment pipeline on raw logs')
+    
     args = parser.parse_args()
     
     if not args.command:
@@ -96,6 +100,12 @@ def main():
         )
         analysis = analyze_logs(logs)
         print_analysis(analysis)
+        return 0
+    elif args.command == 'enrich':
+        count = enrich_logs()
+        if count > 0:
+            print(f'\nEnriched log: ~/.applogs/logs/enriched.jsonl')
+            print(f'View with: tail -1 ~/.applogs/logs/enriched.jsonl | jq .')
         return 0
     
     return 0

@@ -12,7 +12,7 @@ applogs_write_log() {
   local exit_code="$3"
   local duration="$4"
   
-  local timestamp=$(date -u +"%Y-%m-%dT%H:%M:%S.%3NZ")
+  local timestamp=$(python3 -c "from datetime import datetime,timezone; print(datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3]+'Z')" 2>/dev/null || date -u +"%Y-%m-%dT%H:%M:%S.000Z")
   local safe_cmd=$(printf '%s' "$cmd" | sed 's/\\/\\\\/g; s/"/\\"/g' | tr '\n' ' ')
   local safe_cwd=$(printf '%s' "$cwd" | sed 's/\\/\\\\/g; s/"/\\"/g')
   
