@@ -2,7 +2,7 @@
 
 Understand your behavior on your computer.
 
-AppLogs is a tool that logs meaningful actions you take on your laptop — primarily in the terminal and browser — for the purpose of understanding your own behavior and collecting an action data corpus for downstream training.
+AppLogs is a tool that logs meaningful actions you take on your laptop for the purpose of understanding your own behavior and collecting an action data corpus for downstream training.
 
 ## Documentation
 
