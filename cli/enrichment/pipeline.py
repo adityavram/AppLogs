@@ -30,11 +30,15 @@ WORKFLOW_GAP_SECONDS = 300
 RETRY_WINDOW_SECONDS = 60
 UNDO_PATTERNS = [
     r'^git\s+revert',
-    r'^git\s+reset',
-    r'^git\s+checkout\s+\.',  # discard changes
-    r'^rm\s+',
-    r'^undo$',
+    r'^git\s+reset\s+--(hard|soft)',
+    r'^git\s+checkout\s+--\s',  # discard changes (note: -- not just .
 ]
+
+UNDO_RELATED_ACTIONS = {
+    'git_revert': [r'^git\s+commit'],
+    'git_reset': [r'^git\s+commit', r'^git\s+add'],
+    'git_checkout_discard': [r'^git\s+add', r'.*\.py$', r'.*\.js$', r'.*\.md$'],
+}
 
 PAGE_CATEGORIES = {
     'search': [
@@ -265,13 +269,21 @@ def detect_retry(entry, future_actions):
 
 
 def detect_undo(entry, future_actions):
-    """Detect if this action was undone shortly after."""
+    """Detect if this action was undone shortly after by a related revert/reset."""
     source = entry.get('_source')
     if source != 'shell':
         return False
     
+    command = entry.get('command', '')
     ts = parse_timestamp(entry.get('timestamp'))
+    
     if not ts:
+        return False
+    
+    # Only check for undo of actions that could plausibly be undone
+    # (commits, adds, file edits — not random commands)
+    is_undoable = bool(re.match(r'^git\s+(commit|add|push)|^.*\.(py|js|ts|md|txt|json)$', command))
+    if not is_undoable:
         return False
     
     for future in future_actions:

@@ -9,7 +9,6 @@ from collections import defaultdict
 DEDUP_WINDOW_SECONDS = 5
 SCREEN_STATE_FRESHNESS_SECONDS = 120
 MIN_WORKFLOW_ACTIONS = 3
-
 NOISE_PATTERNS = [
     r'^PROMPT_COMMAND=',
     r'^applogs_pre(cmd|exec)',
@@ -58,7 +57,7 @@ ACTION_NORMALIZATIONS = [
     (r'^cp\s', 'copy_file'),
     (r'^touch\s', 'create_file'),
     (r'^chmod\s', 'change_perms'),
-    (r'^./applogs\s+(\w+)', 'applogs_\1'),
+    (r'^./applogs\s+(\w+)', 'applogs_{cmd}'),
     (r'^code\s', 'open_editor'),
     (r'^vim\s', 'open_editor'),
     (r'^nano\s', 'open_editor'),
@@ -81,12 +80,13 @@ def parse_timestamp(ts):
 
 
 def deduplicate_events(events):
-    """Collapse rapid identical events (same source+type+key within DEDUP_WINDOW_SECONDS)."""
+    """Collapse rapid identical events and page_load+navigation pairs."""
     if not events:
         return []
     
     deduped = []
     last_by_key = {}
+    last_url_for_browser = {}
     
     for event in events:
         ts = parse_timestamp(event.get('timestamp'))
@@ -101,7 +101,16 @@ def deduplicate_events(events):
         if source == 'shell':
             key = f'{source}:{event_type}:{event.get("command", "")}'
         elif source in ('chrome', 'safari'):
-            key = f'{source}:{event_type}:{event.get("url", "")}'
+            url = event.get('url', '')
+            # Collapse page_load + navigation for same URL within window
+            # Only keep the navigation (more semantic) and skip the page_load
+            if event_type == 'page_load' and url:
+                last_nav = last_url_for_browser.get(f'{source}:{url}')
+                if last_nav and (ts - last_nav).total_seconds() <= DEDUP_WINDOW_SECONDS:
+                    continue
+            if event_type == 'navigation' and url:
+                last_url_for_browser[f'{source}:{url}'] = ts
+            key = f'{source}:{event_type}:{url}'
         elif source == 'office':
             key = f'{source}:{event_type}:{event.get("app", "")}:{event.get("doc_name", "")}'
         else:
@@ -110,13 +119,41 @@ def deduplicate_events(events):
         last_ts = last_by_key.get(key)
         
         if last_ts and (ts - last_ts).total_seconds() <= DEDUP_WINDOW_SECONDS:
-            # Skip duplicate
             continue
         
         last_by_key[key] = ts
         deduped.append(event)
     
     return deduped
+
+
+def sanitize_url(url):
+    """Strip sensitive query parameters from URLs."""
+    if not url:
+        return url
+    if url.startswith('chrome://') or url.startswith('favorites://'):
+        return url
+    
+    # Split URL and query string
+    if '?' not in url:
+        return url
+    
+    base, query = url.split('?', 1)
+    
+    # If query contains sensitive params, strip entire query string
+    sensitive_indicators = [
+        'encrypted_context', 'token', 'password', 'auth', 'session',
+        'api_key', 'apikey', 'access_token', 'refresh_token',
+        'client_secret', 'code=', 'private_key', 'credential',
+    ]
+    
+    query_lower = query.lower()
+    for indicator in sensitive_indicators:
+        if indicator in query_lower:
+            return base + '?[sanitized]'
+    
+    # Keep non-sensitive query params (like search queries)
+    return url
 
 
 def filter_noise(events):
@@ -163,14 +200,21 @@ def normalize_action(event):
     if source == 'shell':
         command = event.get('command', '')
         for pattern, action_type in ACTION_NORMALIZATIONS:
-            if re.match(pattern, command):
-                normalized['action_type'] = action_type
+            match = re.match(pattern, command)
+            if match:
+                if '{cmd}' in action_type and match.groups():
+                    normalized['action_type'] = action_type.format(cmd=match.group(1))
+                else:
+                    normalized['action_type'] = action_type
                 break
         else:
             base_cmd = command.split()[0] if command else 'unknown'
             normalized['action_type'] = f'cmd_{base_cmd}'
     
     elif source in ('chrome', 'safari'):
+        url = event.get('url', '')
+        if url:
+            normalized['url'] = sanitize_url(url)
         if event_type in ('navigation', 'page_load'):
             normalized['action_type'] = 'web_browse'
         elif event_type == 'tab_focus':
