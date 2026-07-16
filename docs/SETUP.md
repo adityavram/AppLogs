@@ -158,7 +158,39 @@ python3 ~/AppLogs/integrations/office/daemon.py
 
 Press Ctrl+C to stop.
 
-## Step 6: Verify Everything Works
+## Step 6: Start All Daemons
+
+After installing integrations, start the daemons:
+
+```bash
+cd ~/AppLogs
+./applogs start all
+```
+
+This starts the Safari and Office daemons (Chrome and shell don't need daemons). They also auto-start on login if you installed the LaunchAgents.
+
+To stop them later:
+```bash
+./applogs stop all
+```
+
+## Step 7: Install Ollama for LLM Annotation (Optional)
+
+For AI-assisted workflow labeling, install [Ollama](https://ollama.com):
+
+1. Download and install Ollama
+2. Pull a model:
+   ```bash
+   ollama pull llama3.2
+   ```
+3. Verify it's running:
+   ```bash
+   ollama list
+   ```
+
+Then you can use `./applogs annotate --llm` for richer workflow labels.
+
+## Step 8: Verify Everything Works
 
 Run the status check:
 
@@ -178,7 +210,15 @@ Run a combined analysis:
 
 You should see your terminal commands, browser activity, and Office events merged into a single timeline.
 
-## Step 7: Pin the Chrome Extension (Recommended)
+Try the enrichment and workflow pipeline:
+
+```bash
+./applogs enrich
+./applogs annotate
+./applogs timeline --today --workflows
+```
+
+## Step 9: Pin the Chrome Extension (Recommended)
 
 To make the AppLogs icon always visible:
 

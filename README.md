@@ -22,6 +22,9 @@ AppLogs is a tool that logs meaningful actions you take on your laptop for the p
 ./applogs install safari
 ./applogs install office
 
+# Start all daemons (safari, office)
+./applogs start all
+
 # Check what's active
 ./applogs status
 
@@ -30,6 +33,16 @@ AppLogs is a tool that logs meaningful actions you take on your laptop for the p
 
 # Get insights
 ./applogs analyze --today
+
+# Enrich logs with context and outcomes
+./applogs enrich
+
+# Detect workflows and label them
+./applogs annotate           # template-based
+./applogs annotate --llm     # with local LLM annotation (requires Ollama)
+
+# View timeline with workflow boundaries
+./applogs timeline --today --workflows
 ```
 
 For full setup instructions (including Chrome native messaging), see the [Setup Guide](docs/SETUP.md).
@@ -44,8 +57,17 @@ applogs/
 │   ├── install.py           # Install/uninstall integrations
 │   ├── query.py             # Query/filter logs
 │   ├── status.py            # Show active integrations
-│   ├── timeline.py          # Chronological activity view
-│   └── analyze.py           # Behavioral insights
+│   ├── timeline.py          # Chronological activity view (with workflow support)
+│   ├── analyze.py           # Behavioral insights
+│   ├── daemon_manager.py    # Start/stop daemons
+│   ├── importer.py          # Import Chrome logs (fallback)
+│   ├── enrichment/          # Phase 1: context + outcome enrichment
+│   │   └── pipeline.py      # Post-processes raw logs into enriched.jsonl
+│   └── workflows/           # Phase 2: workflow detection + annotation
+│       ├── detector.py      # Content continuity + app-transition clustering
+│       ├── labeler.py       # Template-based workflow labeling
+│       ├── annotator.py     # Ollama LLM annotation (local)
+│       └── assembler.py     # Training data assembly
 ├── integrations/            # Each integration is independently maintainable
 │   ├── chrome/              # Chrome extension + native messaging host
 │   │   ├── manifest.json
@@ -64,9 +86,9 @@ applogs/
 │   │   ├── uninstall.sh
 │   │   └── README.md
 │   ├── shell/               # Shell hooks (bash/zsh)
-│       ├── applogs.sh
-│       ├── install.sh
-│       └── README.md
+│   │   ├── applogs.sh
+│   │   ├── install.sh
+│   │   └── README.md
 │   └── office/              # Office daemon (Word, PowerPoint, Excel)
 │       ├── daemon.py
 │       ├── install.sh
@@ -117,6 +139,7 @@ See `integrations/office/README.md` for details.
 | `applogs timeline [options]` | Chronological activity view |
 | `applogs analyze [options]` | Behavioral insights |
 | `applogs enrich` | Run enrichment pipeline on raw logs |
+| `applogs annotate [--llm] [--model MODEL]` | Detect workflows and label them |
 | `applogs import-chrome [--file PATH]` | Import Chrome logs from a JSONL file (fallback) |
 
 ### Query Options
@@ -132,14 +155,42 @@ See `integrations/office/README.md` for details.
 
 All logs are stored as JSONL in `~/.applogs/logs/`:
 
-- `shell-commands.jsonl` - Shell command logs
-- `chrome-events.jsonl` - Chrome activity logs
-- `safari-events.jsonl` - Safari activity logs
-- `office-events.jsonl` - Office app activity logs
+| File | Contents |
+|------|----------|
+| `shell-commands.jsonl` | Shell command logs (raw) |
+| `chrome-events.jsonl` | Chrome activity logs (raw) |
+| `safari-events.jsonl` | Safari activity logs (raw) |
+| `office-events.jsonl` | Office app activity logs (raw) |
+| `enriched.jsonl` | Enriched events with context, outcomes, workflow IDs |
+| `workflows.json` | Detected workflows with labels and LLM annotations |
+| `training.jsonl` | ML-ready training data (state-action-outcome triplets) |
 
 See `schema/README.md` for the full schema.
 
-## Design Principles
+## Workflow Detection & ML Enrichment
+
+AppLogs goes beyond raw logging — it builds a pipeline for ML training data:
+
+1. **Collect** — integrations log raw events to JSONL
+2. **Enrich** (`./applogs enrich`) — adds context (recent actions, focused app, screen state, time features), outcomes (retry, undo, next-action delay), and workflow clustering
+3. **Annotate** (`./applogs annotate`) — detects workflows using content continuity + app-transition patterns, labels them via templates or local LLM (Ollama)
+4. **Assemble** — outputs ML-ready state-action-outcome triplets to `training.jsonl`
+
+### Ollama Integration
+
+For LLM-assisted annotation, install [Ollama](https://ollama.com) and pull a model:
+
+```bash
+ollama pull llama3.2
+```
+
+Then run:
+
+```bash
+./applogs annotate --llm
+```
+
+All LLM processing is local — no data leaves your machine.
 
 1. **Each integration is independent** — own directory, README, install script
 2. **Privacy first** — all data stays local, nothing leaves your machine
@@ -148,9 +199,10 @@ See `schema/README.md` for the full schema.
 
 ## Future
 
+- Training data pipeline (Phase 3): feature engineering, train/test splits, evaluation
+- Model training (Phase 4): behavioral cloning, sequence models, predictive/assistive/autonomous modes
 - Desktop app with local UI for visualizing behavior
 - Additional integrations (IDE, email, calendar, Slack)
-- Pattern detection and workflow analysis
 - Optional sync/export for cross-device analysis
 
 ## License
