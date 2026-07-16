@@ -13,6 +13,7 @@ from status import show_status
 from timeline import show_timeline
 from importer import import_chrome_logs
 from enrichment.pipeline import enrich_logs
+from daemon_manager import start_daemons, stop_daemons, start_daemon, stop_daemon
 
 
 def main():
@@ -62,6 +63,14 @@ def main():
     # enrich
     subparsers.add_parser('enrich', help='Run enrichment pipeline on raw logs')
     
+    # start
+    start_parser = subparsers.add_parser('start', help='Start daemons for integrations')
+    start_parser.add_argument('integration', choices=['chrome', 'safari', 'shell', 'office', 'all'], nargs='?', default='all', help='Which daemon to start (default: all)')
+    
+    # stop
+    stop_parser = subparsers.add_parser('stop', help='Stop daemons for integrations')
+    stop_parser.add_argument('integration', choices=['chrome', 'safari', 'shell', 'office', 'all'], nargs='?', default='all', help='Which daemon to stop (default: all)')
+    
     args = parser.parse_args()
     
     if not args.command:
@@ -107,6 +116,10 @@ def main():
             print(f'\nEnriched log: ~/.applogs/logs/enriched.jsonl')
             print(f'View with: tail -1 ~/.applogs/logs/enriched.jsonl | jq .')
         return 0
+    elif args.command == 'start':
+        return start_daemons(args.integration, project_root)
+    elif args.command == 'stop':
+        return stop_daemons(args.integration)
     
     return 0
 

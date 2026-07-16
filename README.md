@@ -110,10 +110,13 @@ See `integrations/office/README.md` for details.
 |---------|-------------|
 | `applogs install <chrome\|safari\|shell\|office\|all>` | Install an integration |
 | `applogs uninstall <chrome\|safari\|shell\|office\|all>` | Uninstall an integration |
+| `applogs start <chrome\|safari\|shell\|office\|all>` | Start daemons (default: all) |
+| `applogs stop <chrome\|safari\|shell\|office\|all>` | Stop daemons (default: all) |
 | `applogs status` | Show active integrations and log stats |
 | `applogs query [options]` | Query/filter logs |
 | `applogs timeline [options]` | Chronological activity view |
 | `applogs analyze [options]` | Behavioral insights |
+| `applogs enrich` | Run enrichment pipeline on raw logs |
 | `applogs import-chrome [--file PATH]` | Import Chrome logs from a JSONL file (fallback) |
 
 ### Query Options
