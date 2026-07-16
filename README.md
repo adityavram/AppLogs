@@ -140,6 +140,8 @@ See `integrations/office/README.md` for details.
 | `applogs analyze [options]` | Behavioral insights |
 | `applogs enrich` | Run enrichment pipeline on raw logs |
 | `applogs annotate [--llm] [--model MODEL]` | Detect workflows and label them |
+| `applogs refine [--llm]` | Full refinement: dedup, filter, quality score, training-ready |
+| `applogs export [--output FILE] [--report]` | Export only refined data (never raw logs) |
 | `applogs import-chrome [--file PATH]` | Import Chrome logs from a JSONL file (fallback) |
 
 ### Query Options
@@ -163,7 +165,9 @@ All logs are stored as JSONL in `~/.applogs/logs/`:
 | `office-events.jsonl` | Office app activity logs (raw) |
 | `enriched.jsonl` | Enriched events with context, outcomes, workflow IDs |
 | `workflows.json` | Detected workflows with labels and LLM annotations |
-| `training.jsonl` | ML-ready training data (state-action-outcome triplets) |
+| `training.jsonl` | ML-ready training data (all workflows) |
+| `training-ready.jsonl` | Quality-filtered training data (high+medium only) |
+| `refinement-report.json` | Last refinement run report |
 
 See `schema/README.md` for the full schema.
 
@@ -174,7 +178,24 @@ AppLogs goes beyond raw logging — it builds a pipeline for ML training data:
 1. **Collect** — integrations log raw events to JSONL
 2. **Enrich** (`./applogs enrich`) — adds context (recent actions, focused app, screen state, time features), outcomes (retry, undo, next-action delay), and workflow clustering
 3. **Annotate** (`./applogs annotate`) — detects workflows using content continuity + app-transition patterns, labels them via templates or local LLM (Ollama)
-4. **Assemble** — outputs ML-ready state-action-outcome triplets to `training.jsonl`
+4. **Refine** (`./applogs refine`) — deduplicates, filters noise, normalizes actions, scores workflow quality, outputs only high/medium quality data
+5. **Assemble** — outputs ML-ready state-action-outcome triplets to `training-ready.jsonl`
+6. **Export** (`./applogs export`) — packages only refined data for sharing (raw logs never leave the machine)
+
+### Automated Refinement
+
+A weekly launchd job runs the full refinement pipeline automatically:
+
+```bash
+# Install weekly job (runs Sunday 3 AM)
+~/AppLogs/cli/refinement/install_weekly.sh
+
+# Run manually
+./applogs refine
+
+# Export refined data only
+./applogs export --output ~/applogs-export.jsonl
+```
 
 ### Ollama Integration
 

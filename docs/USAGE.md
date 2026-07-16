@@ -117,6 +117,42 @@ This creates:
 - `~/.applogs/logs/workflows.json` — detected workflows with labels and annotations
 - `~/.applogs/logs/training.jsonl` — ML-ready training data
 
+### Refine and Export Training Data
+
+```bash
+# Run full refinement (dedup, filter, quality score, training-ready output)
+./applogs refine
+
+# With LLM annotation during refinement
+./applogs refine --llm
+
+# Export only refined data (raw logs never leave your machine)
+./applogs export --output ~/applogs-export.jsonl
+
+# Include refinement report in export
+./applogs export --report
+```
+
+The refinement pipeline:
+1. Deduplicates events (same source+type within 5s)
+2. Filters noise (internal commands, empty events)
+3. Normalizes actions (git push → vcs_deploy, etc.)
+4. Scores workflow quality (high/medium/low)
+5. Outputs only high+medium quality workflows
+
+### Automated Weekly Refinement
+
+```bash
+# Install weekly job (runs Sunday 3 AM)
+~/AppLogs/cli/refinement/install_weekly.sh
+
+# Check it's scheduled
+launchctl list | grep applogs
+
+# Uninstall
+~/AppLogs/cli/refinement/uninstall_weekly.sh
+```
+
 ### View Timeline with Workflows
 
 ```bash
@@ -267,7 +303,9 @@ All logs are stored as JSONL in `~/.applogs/logs/`:
 | `office-events.jsonl` | Office app launch/quit, doc open/close/focus, saves |
 | `enriched.jsonl` | Enriched events with context, outcomes, workflow IDs |
 | `workflows.json` | Detected workflows with labels and annotations |
-| `training.jsonl` | ML-ready training data (state-action-outcome triplets) |
+| `training.jsonl` | ML-ready training data (all workflows) |
+| `training-ready.jsonl` | Quality-filtered training data (high+medium only) |
+| `refinement-report.json` | Last refinement run report |
 
 You can inspect them directly:
 

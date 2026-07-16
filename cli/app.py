@@ -18,6 +18,7 @@ from workflows.detector import detect_workflows, workflows_to_json
 from workflows.labeler import label_workflow
 from workflows.annotator import check_ollama, annotate_workflow, annotate_action
 from workflows.assembler import load_enriched, assemble_training_data, write_training_data, write_workflows
+from refinement.pipeline import refine_logs
 
 
 def main():
@@ -74,6 +75,15 @@ def main():
     annotate_parser.add_argument('--model', default='llama3.2', help='Ollama model to use (default: llama3.2)')
     annotate_parser.add_argument('--actions', action='store_true', help='Also annotate individual actions (slower)')
     annotate_parser.add_argument('--gap', type=int, default=300, help='Workflow gap in seconds (default: 300)')
+    
+    # refine
+    refine_parser = subparsers.add_parser('refine', help='Run full refinement pipeline (dedup + filter + quality score)')
+    refine_parser.add_argument('--llm', action='store_true', help='Use Ollama LLM during refinement')
+    
+    # export
+    export_parser = subparsers.add_parser('export', help='Export refined training-ready data (not raw logs)')
+    export_parser.add_argument('--output', default=None, help='Output file path (default: ~/applogs-export.jsonl)')
+    export_parser.add_argument('--report', action='store_true', help='Include refinement report in output')
     
     # start
     start_parser = subparsers.add_parser('start', help='Start daemons for integrations')
@@ -202,6 +212,55 @@ def main():
         print(f'\nDone!')
         print(f'  Workflows:    ~/.applogs/logs/workflows.json')
         print(f'  Training:     ~/.applogs/logs/training.jsonl ({len(examples)} examples)')
+        return 0
+    elif args.command == 'refine':
+        print('Running refinement pipeline...\n')
+        report = refine_logs(use_llm=args.llm)
+        
+        print(f'Pipeline steps:')
+        for step in report['steps']:
+            print(f'  {step}')
+        
+        print(f'\nSummary:')
+        print(f'  Raw events:       {report["raw_event_count"]}')
+        print(f'  After dedup:      {report["deduped_event_count"]} (removed {report["deduped_removed"]})')
+        print(f'  After noise:      {report["filtered_event_count"]} (removed {report["noise_removed"]})')
+        print(f'  Workflows:        {report["workflow_count"]}')
+        qd = report['quality_distribution']
+        print(f'  Quality:          {qd["high"]} high, {qd["medium"]} medium, {qd["low"]} low')
+        print(f'  Training-ready:   {report["training_ready_count"]} events from {report["training_ready_workflows"]} workflows')
+        print(f'\n  Output: {report["output_file"]}')
+        print(f'  Report: ~/.applogs/logs/refinement-report.json')
+        return 0
+    elif args.command == 'export':
+        training_file = Path.home() / '.applogs' / 'logs' / 'training-ready.jsonl'
+        if not training_file.exists():
+            print('No training-ready data found. Run ./applogs refine first.')
+            return 1
+        
+        output_path = args.output or str(Path.home() / 'applogs-export.jsonl')
+        
+        with open(training_file) as f:
+            data = f.read()
+        
+        with open(output_path, 'w') as f:
+            f.write(data)
+        
+        count = data.strip().count('\n') + 1
+        print(f'Exported {count} training-ready events to {output_path}')
+        print(f'\nThis file contains only refined, quality-filtered data.')
+        print(f'Raw logs are NOT included (they stay local).')
+        
+        if args.report:
+            report_file = Path.home() / '.applogs' / 'logs' / 'refinement-report.json'
+            if report_file.exists():
+                report_output = output_path.replace('.jsonl', '-report.json')
+                with open(report_file) as f:
+                    report = f.read()
+                with open(report_output, 'w') as f:
+                    f.write(report)
+                print(f'Refinement report: {report_output}')
+        
         return 0
     elif args.command == 'start':
         return start_daemons(args.integration, project_root)
