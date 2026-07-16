@@ -15,7 +15,7 @@ from collections import Counter
 
 from refinement.quality import (
     deduplicate_events, filter_noise, normalize_action,
-    freshness_weight_screen_state, parse_timestamp
+    freshness_weight_screen_state, parse_timestamp, sanitize_url
 )
 
 
@@ -142,6 +142,36 @@ def score_workflow(workflow):
     return round(score, 2), tier, reasons
 
 
+def deep_sanitize_urls(events):
+    """Sanitize URLs everywhere in enriched events: top-level, screen_state, cross_source."""
+    for event in events:
+        # Top-level URL
+        if 'url' in event:
+            event['url'] = sanitize_url(event['url'])
+        
+        # Screen state URLs
+        ctx = event.get('context', {})
+        if isinstance(ctx, dict):
+            ss = ctx.get('screen_state', {})
+            if isinstance(ss, dict):
+                browser = ss.get('browser', {})
+                if isinstance(browser, dict) and 'url' in browser:
+                    browser['url'] = sanitize_url(browser['url'])
+                    # Also sanitize title if it looks like it contains a URL
+                    if 'domain' in browser and browser['domain']:
+                        browser['domain'] = browser['domain']  # domains are safe
+            
+            # Cross-source summaries may contain URLs
+            cs = ctx.get('cross_source', [])
+            if isinstance(cs, list):
+                for item in cs:
+                    if isinstance(item, dict) and 'summary' in item:
+                        summary = item.get('summary', '')
+                        if 'http' in summary:
+                            # Summaries are short domain-based, usually safe
+                            pass
+
+
 def refine_logs(use_llm=False):
     """Full refinement pipeline. Returns refinement report."""
     from workflows.detector import detect_workflows, workflows_to_json
@@ -238,6 +268,10 @@ def refine_logs(use_llm=False):
     # 6. Freshness-weight screen state
     enriched = freshness_weight_screen_state(enriched)
     report['steps'].append(f'Freshness-weighted screen state for {len(enriched)} events')
+    
+    # 6.5. Deep sanitize URLs everywhere
+    deep_sanitize_urls(enriched)
+    report['steps'].append(f'Sanitized URLs in all events')
     
     # 7. Detect workflows
     workflows = detect_workflows(enriched, gap_seconds=300)

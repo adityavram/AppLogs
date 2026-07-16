@@ -86,31 +86,38 @@ def deduplicate_events(events):
     
     deduped = []
     last_by_key = {}
-    last_url_for_browser = {}
     
-    for event in events:
+    i = 0
+    while i < len(events):
+        event = events[i]
         ts = parse_timestamp(event.get('timestamp'))
         if not ts:
             deduped.append(event)
+            i += 1
             continue
         
         source = event.get('_source', event.get('source', ''))
         event_type = event.get('type', '')
         
-        # Build dedup key
+        # Skip page_load if a navigation for same URL follows within window
+        if source in ('chrome', 'safari') and event_type == 'page_load':
+            url = event.get('url', '')
+            if url and i + 1 < len(events):
+                next_event = events[i + 1]
+                next_ts = parse_timestamp(next_event.get('timestamp', ''))
+                if (next_ts and 
+                    (next_ts - ts).total_seconds() <= DEDUP_WINDOW_SECONDS and
+                    next_event.get('_source', next_event.get('source', '')) == source and
+                    next_event.get('type') == 'navigation' and
+                    next_event.get('url', '') == url):
+                    # Skip this page_load, the navigation will be kept
+                    i += 1
+                    continue
+        
         if source == 'shell':
             key = f'{source}:{event_type}:{event.get("command", "")}'
         elif source in ('chrome', 'safari'):
-            url = event.get('url', '')
-            # Collapse page_load + navigation for same URL within window
-            # Only keep the navigation (more semantic) and skip the page_load
-            if event_type == 'page_load' and url:
-                last_nav = last_url_for_browser.get(f'{source}:{url}')
-                if last_nav and (ts - last_nav).total_seconds() <= DEDUP_WINDOW_SECONDS:
-                    continue
-            if event_type == 'navigation' and url:
-                last_url_for_browser[f'{source}:{url}'] = ts
-            key = f'{source}:{event_type}:{url}'
+            key = f'{source}:{event_type}:{event.get("url", "")}'
         elif source == 'office':
             key = f'{source}:{event_type}:{event.get("app", "")}:{event.get("doc_name", "")}'
         else:
@@ -119,10 +126,12 @@ def deduplicate_events(events):
         last_ts = last_by_key.get(key)
         
         if last_ts and (ts - last_ts).total_seconds() <= DEDUP_WINDOW_SECONDS:
+            i += 1
             continue
         
         last_by_key[key] = ts
         deduped.append(event)
+        i += 1
     
     return deduped
 
@@ -145,6 +154,8 @@ def sanitize_url(url):
         'encrypted_context', 'token', 'password', 'auth', 'session',
         'api_key', 'apikey', 'access_token', 'refresh_token',
         'client_secret', 'code=', 'private_key', 'credential',
+        'ci=', 'apc=', 'cuid=', 'attempt_id=',
+        'privacy_mutation_token', 'ars=',
     ]
     
     query_lower = query.lower()
