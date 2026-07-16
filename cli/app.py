@@ -14,6 +14,10 @@ from timeline import show_timeline
 from importer import import_chrome_logs
 from enrichment.pipeline import enrich_logs
 from daemon_manager import start_daemons, stop_daemons, start_daemon, stop_daemon
+from workflows.detector import detect_workflows, workflows_to_json
+from workflows.labeler import label_workflow
+from workflows.annotator import check_ollama, annotate_workflow, annotate_action
+from workflows.assembler import load_enriched, assemble_training_data, write_training_data, write_workflows
 
 
 def main():
@@ -53,6 +57,7 @@ def main():
     timeline_parser.add_argument('--today', action='store_true', help='Only today')
     timeline_parser.add_argument('--since', help='Logs since (YYYY-MM-DD)')
     timeline_parser.add_argument('--limit', type=int, default=100, help='Max events (default: 100)')
+    timeline_parser.add_argument('--workflows', action='store_true', help='Show workflow labels and boundaries')
     
     # analyze
     analyze_parser = subparsers.add_parser('analyze', help='Show behavioral insights')
@@ -62,6 +67,13 @@ def main():
     
     # enrich
     subparsers.add_parser('enrich', help='Run enrichment pipeline on raw logs')
+    
+    # annotate
+    annotate_parser = subparsers.add_parser('annotate', help='Detect workflows and annotate with labels')
+    annotate_parser.add_argument('--llm', action='store_true', help='Use Ollama LLM for richer annotation')
+    annotate_parser.add_argument('--model', default='llama3.2', help='Ollama model to use (default: llama3.2)')
+    annotate_parser.add_argument('--actions', action='store_true', help='Also annotate individual actions (slower)')
+    annotate_parser.add_argument('--gap', type=int, default=300, help='Workflow gap in seconds (default: 300)')
     
     # start
     start_parser = subparsers.add_parser('start', help='Start daemons for integrations')
@@ -99,7 +111,7 @@ def main():
         print_logs(logs)
         return 0
     elif args.command == 'timeline':
-        return show_timeline(today=args.today, since=args.since, limit=args.limit)
+        return show_timeline(today=args.today, since=args.since, limit=args.limit, show_workflows=args.workflows)
     elif args.command == 'analyze':
         logs = query_logs(
             source=args.source,
@@ -115,6 +127,81 @@ def main():
         if count > 0:
             print(f'\nEnriched log: ~/.applogs/logs/enriched.jsonl')
             print(f'View with: tail -1 ~/.applogs/logs/enriched.jsonl | jq .')
+        return 0
+    elif args.command == 'annotate':
+        # Load enriched logs
+        enriched = load_enriched()
+        if not enriched:
+            print('No enriched logs found. Run ./applogs enrich first.')
+            return 1
+        
+        print(f'Loaded {len(enriched)} enriched events')
+        
+        # Detect workflows
+        print(f'Detecting workflows (gap={args.gap}s)...')
+        workflows = detect_workflows(enriched, gap_seconds=args.gap)
+        print(f'Found {len(workflows)} workflows')
+        
+        # Template-based labeling
+        print('Applying template labels...')
+        labeled = 0
+        for wf in workflows:
+            result = label_workflow(wf)
+            if result:
+                wf['label'] = result['label']
+                wf['description'] = result['description']
+                labeled += 1
+            else:
+                wf['label'] = 'unknown'
+                wf['description'] = ''
+        print(f'  {labeled}/{len(workflows)} matched templates')
+        
+        # LLM annotation (optional)
+        if args.llm:
+            if not check_ollama():
+                print('Ollama not running. Skipping LLM annotation.')
+                print('Start Ollama with: ollama serve')
+            else:
+                print(f'LLM annotation with {args.model}...')
+                annotated = 0
+                to_annotate = [wf for wf in workflows if wf.get('action_count', len(wf.get('actions', []))) >= 3]
+                print(f'  Annotating {len(to_annotate)} workflows (3+ actions)...')
+                for idx, wf in enumerate(to_annotate):
+                    print(f'  [{idx+1}/{len(to_annotate)}] ', end='', flush=True)
+                    wf_json = {
+                        'action_summaries': workflows_to_json([wf])[0]['action_summaries'],
+                        'keywords': wf.get('keywords', []),
+                        'app_sequence': wf.get('app_sequence', []),
+                    }
+                    result = annotate_workflow(wf_json, model=args.model)
+                    if result:
+                        wf['annotation'] = result
+                        if wf.get('label') == 'unknown':
+                            wf['label'] = result.get('workflow_label', 'unknown')
+                            wf['description'] = result.get('intent', '')
+                        annotated += 1
+                        print(f'{wf["label"]}')
+                    else:
+                        print('failed')
+                print(f'  {annotated}/{len(to_annotate)} annotated by LLM')
+        
+        # Print workflow summary
+        print('\nWorkflows:')
+        for wf in workflows:
+            ts = wf['start_ts'].strftime('%H:%M') if hasattr(wf['start_ts'], 'strftime') else '?'
+            count = wf.get('action_count', len(wf.get('actions', [])))
+            label = wf.get('label', '?')
+            print(f'  [{ts}] {label:20s} ({count} actions)')
+        
+        # Assemble training data
+        print('\nAssembling training data...')
+        examples = assemble_training_data(workflows, enriched)
+        write_training_data(examples)
+        write_workflows(workflows)
+        
+        print(f'\nDone!')
+        print(f'  Workflows:    ~/.applogs/logs/workflows.json')
+        print(f'  Training:     ~/.applogs/logs/training.jsonl ({len(examples)} examples)')
         return 0
     elif args.command == 'start':
         return start_daemons(args.integration, project_root)

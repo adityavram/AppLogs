@@ -1,10 +1,33 @@
 """Show chronological activity timeline across all sources."""
 
+import json
+from pathlib import Path
 from query import query_logs
 from datetime import datetime
 
+WORKFLOWS_FILE = Path.home() / '.applogs' / 'logs' / 'workflows.json'
 
-def show_timeline(today=False, since=None, limit=100):
+
+def _load_workflows():
+    """Load annotated workflows if available."""
+    if not WORKFLOWS_FILE.exists():
+        return {}
+    try:
+        with open(WORKFLOWS_FILE) as f:
+            workflows = json.load(f)
+        # Build timestamp -> workflow label lookup
+        ts_map = {}
+        for wf in workflows:
+            label = wf.get('label', 'unknown')
+            start = wf.get('start_ts', '')[:19]
+            end = wf.get('end_ts', '')[:19]
+            ts_map[label] = (start, end, wf.get('action_count', 0))
+        return ts_map
+    except (json.JSONDecodeError, Exception):
+        return {}
+
+
+def show_timeline(today=False, since=None, limit=100, show_workflows=False):
     logs = query_logs(source='all', today=today, since=since, limit=limit)
     
     if not logs:
@@ -12,11 +35,16 @@ def show_timeline(today=False, since=None, limit=100):
         print('Make sure you have integrations installed: applogs install all')
         return 1
     
+    workflows = _load_workflows() if show_workflows else {}
+    
     print('Activity Timeline')
     print('=' * 70)
+    if workflows:
+        print(f'  ({len(workflows)} workflows detected)')
     print()
     
     current_date = None
+    current_workflow = None
     
     for log in logs:
         ts = log.get('timestamp', '')
@@ -29,6 +57,19 @@ def show_timeline(today=False, since=None, limit=100):
         if log_date != current_date:
             current_date = log_date
             print(f'\n--- {log_date} ---\n')
+        
+        # Check workflow boundaries
+        if workflows:
+            for label, (start, end, count) in workflows.items():
+                if start and end and start[:19] <= ts[:19] <= end[:19]:
+                    if label != current_workflow:
+                        current_workflow = label
+                        print(f'  ┌── [{label}] ({count} actions) ──')
+                    break
+            else:
+                if current_workflow:
+                    print(f'  └── end workflow ──')
+                    current_workflow = None
         
         source = log.get('_source', '?')
         event_type = log.get('type', '?')
@@ -90,6 +131,9 @@ def show_timeline(today=False, since=None, limit=100):
                 print(f'  {log_time}  [L] {app} launched')
             elif event_type == 'app_quit':
                 print(f'  {log_time}  [Q] {app} quit')
+    
+    if current_workflow:
+        print(f'  └── end workflow ──')
     
     print(f'\n{len(logs)} events shown')
     return 0

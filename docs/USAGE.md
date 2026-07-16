@@ -66,6 +66,74 @@ Shows:
 
 Shows which integrations are active and how many logs each has collected.
 
+### Start/Stop Daemons
+
+```bash
+# Start all daemons (safari, office)
+./applogs start all
+
+# Stop all
+./applogs stop all
+
+# Start/stop individual
+./applogs start safari
+./applogs stop office
+```
+
+### Enrich Logs
+
+Run the enrichment pipeline to add context, outcomes, and workflow clustering to raw logs:
+
+```bash
+./applogs enrich
+```
+
+This creates `~/.applogs/logs/enriched.jsonl` with each event as a state-action-outcome triplet including:
+- Recent actions (sliding window of 10)
+- Focused app inference
+- Time features (hour, day of week, etc.)
+- Cross-source correlation
+- Screen state snapshot
+- Page category classification
+- Outcome tracking (retry, undo, next-action delay)
+
+### Detect and Annotate Workflows
+
+```bash
+# Template-based workflow detection and labeling
+./applogs annotate
+
+# With LLM annotation (requires Ollama running locally)
+./applogs annotate --llm
+
+# With specific Ollama model
+./applogs annotate --llm --model llama3
+
+# Adjust workflow gap (default 300s = 5 min)
+./applogs annotate --gap 600
+```
+
+This creates:
+- `~/.applogs/logs/workflows.json` — detected workflows with labels and annotations
+- `~/.applogs/logs/training.jsonl` — ML-ready training data
+
+### View Timeline with Workflows
+
+```bash
+./applogs timeline --today --workflows
+```
+
+Shows workflow labels and boundaries in the timeline:
+```
+--- 2026-07-14 ---
+
+  ┌── [fix_bug] (7 actions) ──
+  10:15:03  [.] git checkout -b fix/42
+  10:16:00  [>] github.com
+  10:22:14  [.] git push
+  └── end workflow ──
+```
+
 ## Useful Queries
 
 ### Search Your Commands
@@ -197,6 +265,9 @@ All logs are stored as JSONL in `~/.applogs/logs/`:
 | `chrome-events.jsonl` | Chrome tab focus/blur, navigation, page loads |
 | `safari-events.jsonl` | Safari navigation, tab focus, app focus/blur |
 | `office-events.jsonl` | Office app launch/quit, doc open/close/focus, saves |
+| `enriched.jsonl` | Enriched events with context, outcomes, workflow IDs |
+| `workflows.json` | Detected workflows with labels and annotations |
+| `training.jsonl` | ML-ready training data (state-action-outcome triplets) |
 
 You can inspect them directly:
 
