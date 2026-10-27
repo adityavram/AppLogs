@@ -70,6 +70,16 @@ def show_status():
         print(f'    Last: {last.get("timestamp", "?")[:19]}  {last.get("type", "?")}  {last.get("app", "?")}')
     print()
     
+    # Check calendar integration
+    calendar_logs = load_logs(source='calendar')
+    calendar_daemon = 'com.applogs.calendar' in launchctl_out
+    print(f'  Calendar Integration: {"ACTIVE" if calendar_daemon else "NOT INSTALLED"}')
+    print(f'    Logs: {len(calendar_logs)} entries')
+    if calendar_logs:
+        last = calendar_logs[-1]
+        print(f'    Last: {last.get("timestamp", "?")[:19]}  {last.get("type", "?")}  {last.get("title", "?")}')
+    print()
+    
     # Log directory
     print(f'  Log directory: {log_dir}')
     if log_dir.exists():

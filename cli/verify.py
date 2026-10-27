@@ -28,6 +28,7 @@ RAW_REQUIRED = {
     'safari':   {'timestamp', 'type'},
     'office':   {'timestamp', 'type', 'app'},
     'appfocus': {'timestamp', 'type', 'app'},
+    'calendar': {'timestamp', 'type', 'title', 'event_id'},
 }
 
 RAW_FILES = {
@@ -36,6 +37,7 @@ RAW_FILES = {
     'safari': 'safari-events.jsonl',
     'office': 'office-events.jsonl',
     'appfocus': 'appfocus-events.jsonl',
+    'calendar': 'calendar-events.jsonl',
 }
 
 ENRICHED_REQUIRED = {'timestamp', 'source', 'type', 'action', 'context', 'outcome'}
@@ -163,6 +165,9 @@ def _synthetic_events():
         # a second appfocus to create a blur with duration
         {'timestamp': base + '06.000Z', 'type': 'app_focus', '_source': 'appfocus',
          'app': 'Terminal', 'bundle_id': 'com.apple.Terminal', 'window_title': 'verify — bash'},
+        {'timestamp': base + '07.000Z', 'type': 'meeting_upcoming', '_source': 'calendar',
+         'title': 'standup', 'start_time': base + '08.000Z', 'end_time': base + '15.000Z',
+         'event_id': 'verify-evt-1', 'calendar_name': 'Work', 'minutes_until_start': 1.0},
     ]
 
 
@@ -291,6 +296,19 @@ def verify_pipeline():
                 failures += 1
             else:
                 _ok('appfocus window_title preserved through enrichment')
+
+        # Regression: calendar events must appear and carry title + event_id.
+        cal = [e for e in enriched if e.get('source') == 'calendar']
+        if not cal:
+            _fail('no calendar events in enriched (source not plumbed through)')
+            failures += 1
+        else:
+            _ok(f'calendar events present in enriched: {len(cal)}')
+            if not any(e.get('title') and e.get('event_id') for e in cal):
+                _fail('calendar title or event_id dropped during enrichment')
+                failures += 1
+            else:
+                _ok('calendar title + event_id preserved through enrichment')
 
         if tr:
             _ok(f'training-ready.jsonl: {len(tr)} events (workflow join works)')

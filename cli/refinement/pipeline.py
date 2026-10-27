@@ -101,6 +101,8 @@ def score_workflow(workflow):
                 action_types.add('office_lifecycle')
         elif source == 'appfocus':
             action_types.add('app_focus_switch')
+        elif source == 'calendar':
+            action_types.add('meeting_event')
     
     if len(action_types) >= 3:
         score += 0.2

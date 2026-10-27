@@ -14,6 +14,7 @@ SOURCE_FILES = {
     'safari': 'safari-events.jsonl',
     'office': 'office-events.jsonl',
     'appfocus': 'appfocus-events.jsonl',
+    'calendar': 'calendar-events.jsonl',
 }
 
 
@@ -113,6 +114,13 @@ def print_logs(logs):
                 detail += f' dur={dur}s'
             if wt:
                 detail += f' win={wt[:30]!r}'
+            print(f'  {timestamp}  [{source}] {event_type:15s}  {detail}')
+        elif source == 'calendar':
+            title = log.get('title', '?')[:40]
+            mins = log.get('minutes_until_start')
+            detail = f'meeting={title!r}'
+            if mins is not None:
+                detail += f' in={mins}min'
             print(f'  {timestamp}  [{source}] {event_type:15s}  {detail}')
         else:
             print(f'  {timestamp}  [{source}] {event_type:15s}  {json.dumps(log)[:80]}')

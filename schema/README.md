@@ -166,3 +166,35 @@ with real state transitions.
 | `app` | string | Process name |
 | `bundle_id` | string | macOS bundle identifier |
 | `duration_s` | float | Seconds the app was focused before blur (≥2s) |
+
+### Calendar Events (`calendar-events.jsonl`)
+
+Captures meeting transitions from macOS Calendar — the contextual
+force-multiplier that lets the model learn *when* preloads should fire.
+Join `meeting_upcoming` against app-focus transitions to learn patterns
+like "5 min before a 'standup' meeting, the user opens Teams."
+
+#### `meeting_start`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `title` | string | Event title/summary |
+| `start_time` | string | ISO 8601 UTC start time |
+| `end_time` | string | ISO 8601 UTC end time |
+| `event_id` | string | Calendar event UID (or `title:start_time` fallback) |
+| `calendar_name` | string | Calendar the event belongs to |
+| `location` | string | Event location (optional, omitted if empty) |
+| `all_day` | bool | Present and true for all-day events |
+| `attendees_count` | int | Number of attendees (optional, omitted if 0) |
+
+#### `meeting_end`
+
+Same fields as `meeting_start`.
+
+#### `meeting_upcoming`
+
+Same fields as `meeting_start`, plus:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `minutes_until_start` | float | Minutes until the event begins (the preload trigger) |

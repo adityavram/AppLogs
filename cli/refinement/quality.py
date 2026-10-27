@@ -122,6 +122,8 @@ def deduplicate_events(events):
             key = f'{source}:{event_type}:{event.get("app", "")}:{event.get("doc_name", "")}'
         elif source == 'appfocus':
             key = f'{source}:{event_type}:{event.get("app", "")}'
+        elif source == 'calendar':
+            key = f'{source}:{event_type}:{event.get("event_id", "")}'
         else:
             key = f'{source}:{event_type}'
         

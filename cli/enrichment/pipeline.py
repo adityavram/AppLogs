@@ -23,6 +23,7 @@ RAW_FILES = {
     'safari': 'safari-events.jsonl',
     'office': 'office-events.jsonl',
     'appfocus': 'appfocus-events.jsonl',
+    'calendar': 'calendar-events.jsonl',
 }
 ENRICHED_FILE = LOG_DIR / 'enriched.jsonl'
 
@@ -203,6 +204,9 @@ def extract_action_summary(entry):
         if wt:
             return f'{app} — {wt[:40]} ({event_type})'
         return f'{app} ({event_type})'
+    elif source == 'calendar':
+        title = entry.get('title', '?')
+        return f'meeting: {title[:40]} ({event_type})'
     return f'{event_type}'
 
 
@@ -482,7 +486,9 @@ def enrich_logs():
         for key in ('command', 'cwd', 'url', 'title', 'app', 'doc_name', 'doc_path',
                      'from_url', 'duration_ms', 'duration_s', 'exit_code',
                      'output_first', 'output_last',
-                     'window_title', 'bundle_id'):
+                     'window_title', 'bundle_id',
+                     'start_time', 'end_time', 'event_id', 'calendar_name',
+                     'location', 'all_day', 'attendees_count', 'minutes_until_start'):
             if key in entry:
                 enriched_entry[key] = entry[key]
         

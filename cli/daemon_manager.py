@@ -7,18 +7,21 @@ LAUNCH_AGENTS = {
     'safari': 'com.applogs.safari',
     'office': 'com.applogs.office',
     'appfocus': 'com.applogs.appfocus',
+    'calendar': 'com.applogs.calendar',
 }
 
 PLIST_PATHS = {
     'safari': Path.home() / 'Library' / 'LaunchAgents' / 'com.applogs.safari.plist',
     'office': Path.home() / 'Library' / 'LaunchAgents' / 'com.applogs.office.plist',
     'appfocus': Path.home() / 'Library' / 'LaunchAgents' / 'com.applogs.appfocus.plist',
+    'calendar': Path.home() / 'Library' / 'LaunchAgents' / 'com.applogs.calendar.plist',
 }
 
 DAEMON_SCRIPTS = {
     'safari': 'integrations/safari/daemon.py',
     'office': 'integrations/office/daemon.py',
     'appfocus': 'integrations/appfocus/daemon.py',
+    'calendar': 'integrations/calendar/daemon.py',
 }
 
 
@@ -93,7 +96,7 @@ def start_daemons(name, project_root):
     """Start one or all daemons."""
     if name == 'all':
         print('Starting AppLogs daemons...\n')
-        for n in ['shell', 'chrome', 'safari', 'office', 'appfocus']:
+        for n in ['shell', 'chrome', 'safari', 'office', 'appfocus', 'calendar']:
             start_daemon(n, project_root)
         print('\nRun ./applogs status to verify')
         return 0
@@ -106,7 +109,7 @@ def stop_daemons(name):
     """Stop one or all daemons."""
     if name == 'all':
         print('Stopping AppLogs daemons...\n')
-        for n in ['shell', 'chrome', 'safari', 'office', 'appfocus']:
+        for n in ['shell', 'chrome', 'safari', 'office', 'appfocus', 'calendar']:
             stop_daemon(n)
         print('\nAll daemons stopped')
         return 0
