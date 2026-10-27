@@ -13,6 +13,7 @@ SOURCE_FILES = {
     'chrome': 'chrome-events.jsonl',
     'safari': 'safari-events.jsonl',
     'office': 'office-events.jsonl',
+    'appfocus': 'appfocus-events.jsonl',
 }
 
 
@@ -103,6 +104,16 @@ def print_logs(logs):
             url = log.get('url', '?')[:50]
             title = log.get('title', '')[:30]
             print(f'  {timestamp}  [{source}] {event_type:15s}  url={url!r}  title={title!r}')
+        elif source == 'appfocus':
+            app = log.get('app', '?')
+            dur = log.get('duration_s')
+            wt = log.get('window_title', '')
+            detail = f'app={app}'
+            if dur is not None:
+                detail += f' dur={dur}s'
+            if wt:
+                detail += f' win={wt[:30]!r}'
+            print(f'  {timestamp}  [{source}] {event_type:15s}  {detail}')
         else:
             print(f'  {timestamp}  [{source}] {event_type:15s}  {json.dumps(log)[:80]}')
     

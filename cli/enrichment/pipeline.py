@@ -22,6 +22,7 @@ RAW_FILES = {
     'chrome': 'chrome-events.jsonl',
     'safari': 'safari-events.jsonl',
     'office': 'office-events.jsonl',
+    'appfocus': 'appfocus-events.jsonl',
 }
 ENRICHED_FILE = LOG_DIR / 'enriched.jsonl'
 
@@ -196,6 +197,12 @@ def extract_action_summary(entry):
         app = entry.get('app', '?')
         doc = entry.get('doc_name', '')
         return f'{app}: {doc} ({event_type})' if doc else f'{app} ({event_type})'
+    elif source == 'appfocus':
+        app = entry.get('app', '?')
+        wt = entry.get('window_title', '')
+        if wt:
+            return f'{app} — {wt[:40]} ({event_type})'
+        return f'{app} ({event_type})'
     return f'{event_type}'
 
 
@@ -472,9 +479,10 @@ def enrich_logs():
         }
         
         # Preserve source-specific fields
-        for key in ('command', 'cwd', 'url', 'title', 'app', 'doc_name', 'doc_path', 
+        for key in ('command', 'cwd', 'url', 'title', 'app', 'doc_name', 'doc_path',
                      'from_url', 'duration_ms', 'duration_s', 'exit_code',
-                     'output_first', 'output_last'):
+                     'output_first', 'output_last',
+                     'window_title', 'bundle_id'):
             if key in entry:
                 enriched_entry[key] = entry[key]
         

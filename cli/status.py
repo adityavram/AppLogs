@@ -60,6 +60,16 @@ def show_status():
         print(f'    Last: {last.get("timestamp", "?")[:19]}  {last.get("type", "?")}  {last.get("app", "?")}')
     print()
     
+    # Check appfocus integration
+    appfocus_logs = load_logs(source='appfocus')
+    appfocus_daemon = 'com.applogs.appfocus' in launchctl_out
+    print(f'  AppFocus Integration: {"ACTIVE" if appfocus_daemon else "NOT INSTALLED"}')
+    print(f'    Logs: {len(appfocus_logs)} entries')
+    if appfocus_logs:
+        last = appfocus_logs[-1]
+        print(f'    Last: {last.get("timestamp", "?")[:19]}  {last.get("type", "?")}  {last.get("app", "?")}')
+    print()
+    
     # Log directory
     print(f'  Log directory: {log_dir}')
     if log_dir.exists():

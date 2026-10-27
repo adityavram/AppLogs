@@ -99,6 +99,8 @@ def score_workflow(workflow):
                 action_types.add('doc_focus')
             else:
                 action_types.add('office_lifecycle')
+        elif source == 'appfocus':
+            action_types.add('app_focus_switch')
     
     if len(action_types) >= 3:
         score += 0.2
@@ -289,7 +291,8 @@ def refine_logs(use_llm=False):
         }
         
         for key in ('command', 'cwd', 'url', 'title', 'app', 'doc_name', 'doc_path',
-                     'from_url', 'duration_ms', 'duration_s', 'exit_code'):
+                     'from_url', 'duration_ms', 'duration_s', 'exit_code',
+                     'window_title', 'bundle_id'):
             if key in entry:
                 enriched_entry[key] = entry[key]
         

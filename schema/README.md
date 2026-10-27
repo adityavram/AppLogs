@@ -144,3 +144,25 @@ No additional fields.
 | `app` | string | App key |
 | `doc_name` | string | Document name |
 | `doc_path` | string | Full file path |
+
+### AppFocus Events (`appfocus-events.jsonl`)
+
+Captures focus/blur with duration for **every** application (the cross-app
+state layer). Replaces the primitive `track_apps.py` "Opened: <app>" records
+with real state transitions.
+
+#### `app_focus`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `app` | string | Process name (e.g. `Sublime Text`, `Spotify`) |
+| `bundle_id` | string | macOS bundle identifier (e.g. `com.sublimetext.4`) |
+| `window_title` | string | Front window title via AX (best-effort; empty if unavailable) |
+
+#### `app_blur`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `app` | string | Process name |
+| `bundle_id` | string | macOS bundle identifier |
+| `duration_s` | float | Seconds the app was focused before blur (≥2s) |

@@ -11,7 +11,8 @@ def install_integration(name, project_root):
         safari_rc = install_integration('safari', project_root)
         shell_rc = install_integration('shell', project_root)
         office_rc = install_integration('office', project_root)
-        return chrome_rc or safari_rc or shell_rc or office_rc
+        appfocus_rc = install_integration('appfocus', project_root)
+        return chrome_rc or safari_rc or shell_rc or office_rc or appfocus_rc
     
     integration_dir = project_root / 'integrations' / name
     install_script = integration_dir / 'install.sh'
@@ -39,6 +40,7 @@ def uninstall_integration(name):
         uninstall_integration('chrome')
         uninstall_integration('safari')
         uninstall_integration('office')
+        uninstall_integration('appfocus')
         return 0
     
     if name == 'shell':
@@ -87,6 +89,16 @@ def uninstall_integration(name):
             print('Stopped and removed AppLogs Safari daemon.')
         else:
             print('AppLogs Safari integration not installed.')
+        return 0
+    
+    if name == 'appfocus':
+        plist_file = Path.home() / 'Library' / 'LaunchAgents' / 'com.applogs.appfocus.plist'
+        if plist_file.exists():
+            subprocess.run(['launchctl', 'unload', str(plist_file)], capture_output=True)
+            plist_file.unlink()
+            print('Stopped and removed AppLogs AppFocus daemon.')
+        else:
+            print('AppLogs AppFocus integration not installed.')
         return 0
     
     print(f'Unknown integration: {name}')

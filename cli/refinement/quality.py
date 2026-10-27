@@ -120,6 +120,8 @@ def deduplicate_events(events):
             key = f'{source}:{event_type}:{event.get("url", "")}'
         elif source == 'office':
             key = f'{source}:{event_type}:{event.get("app", "")}:{event.get("doc_name", "")}'
+        elif source == 'appfocus':
+            key = f'{source}:{event_type}:{event.get("app", "")}'
         else:
             key = f'{source}:{event_type}'
         

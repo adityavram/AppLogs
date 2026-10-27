@@ -19,6 +19,7 @@ from workflows.labeler import label_workflow
 from workflows.annotator import check_ollama, annotate_workflow, annotate_action
 from workflows.assembler import load_enriched, assemble_training_data, write_training_data, write_workflows
 from refinement.pipeline import refine_logs
+from verify import run_verify
 
 
 def main():
@@ -31,11 +32,11 @@ def main():
     
     # install
     install_parser = subparsers.add_parser('install', help='Install an integration')
-    install_parser.add_argument('integration', choices=['chrome', 'safari', 'shell', 'office', 'all'], help='Which integration to install')
+    install_parser.add_argument('integration', choices=['chrome', 'safari', 'shell', 'office', 'appfocus', 'all'], help='Which integration to install')
     
     # uninstall
     uninstall_parser = subparsers.add_parser('uninstall', help='Uninstall an integration')
-    uninstall_parser.add_argument('integration', choices=['chrome', 'safari', 'shell', 'office', 'all'], help='Which integration to uninstall')
+    uninstall_parser.add_argument('integration', choices=['chrome', 'safari', 'shell', 'office', 'appfocus', 'all'], help='Which integration to uninstall')
     
     # import-chrome
     import_parser = subparsers.add_parser('import-chrome', help='Import Chrome logs from Downloads')
@@ -46,7 +47,7 @@ def main():
     
     # query
     query_parser = subparsers.add_parser('query', help='Query logs')
-    query_parser.add_argument('--source', choices=['chrome', 'safari', 'shell', 'office', 'all'], default='all', help='Filter by source')
+    query_parser.add_argument('--source', choices=['chrome', 'safari', 'shell', 'office', 'appfocus', 'all'], default='all', help='Filter by source')
     query_parser.add_argument('--type', help='Filter by event type (e.g. shell_command, tab_focus)')
     query_parser.add_argument('--today', action='store_true', help='Only today\'s logs')
     query_parser.add_argument('--since', help='Logs since (YYYY-MM-DD)')
@@ -64,7 +65,7 @@ def main():
     analyze_parser = subparsers.add_parser('analyze', help='Show behavioral insights')
     analyze_parser.add_argument('--today', action='store_true', help='Only today')
     analyze_parser.add_argument('--since', help='Logs since (YYYY-MM-DD)')
-    analyze_parser.add_argument('--source', choices=['chrome', 'safari', 'shell', 'office', 'all'], default='all', help='Filter by source')
+    analyze_parser.add_argument('--source', choices=['chrome', 'safari', 'shell', 'office', 'appfocus', 'all'], default='all', help='Filter by source')
     
     # enrich
     subparsers.add_parser('enrich', help='Run enrichment pipeline on raw logs')
@@ -80,6 +81,11 @@ def main():
     refine_parser = subparsers.add_parser('refine', help='Run full refinement pipeline (dedup + filter + quality score)')
     refine_parser.add_argument('--llm', action='store_true', help='Use Ollama LLM during refinement')
     
+    # verify
+    verify_parser = subparsers.add_parser('verify', help='Verify logs and pipeline integrity')
+    verify_parser.add_argument('mode', choices=['schema', 'pipeline', 'live'], nargs='?', default='schema',
+                               help='schema: validate JSONL shapes; pipeline: synthetic round-trip regression; live: end-to-end daemon→enriched check')
+    
     # export
     export_parser = subparsers.add_parser('export', help='Export refined training-ready data (not raw logs)')
     export_parser.add_argument('--output', default=None, help='Output file path (default: ~/applogs-export.jsonl)')
@@ -87,11 +93,11 @@ def main():
     
     # start
     start_parser = subparsers.add_parser('start', help='Start daemons for integrations')
-    start_parser.add_argument('integration', choices=['chrome', 'safari', 'shell', 'office', 'all'], nargs='?', default='all', help='Which daemon to start (default: all)')
+    start_parser.add_argument('integration', choices=['chrome', 'safari', 'shell', 'office', 'appfocus', 'all'], nargs='?', default='all', help='Which daemon to start (default: all)')
     
     # stop
     stop_parser = subparsers.add_parser('stop', help='Stop daemons for integrations')
-    stop_parser.add_argument('integration', choices=['chrome', 'safari', 'shell', 'office', 'all'], nargs='?', default='all', help='Which daemon to stop (default: all)')
+    stop_parser.add_argument('integration', choices=['chrome', 'safari', 'shell', 'office', 'appfocus', 'all'], nargs='?', default='all', help='Which daemon to stop (default: all)')
     
     args = parser.parse_args()
     
@@ -232,6 +238,8 @@ def main():
         print(f'\n  Output: {report["output_file"]}')
         print(f'  Report: ~/.applogs/logs/refinement-report.json')
         return 0
+    elif args.command == 'verify':
+        return run_verify(args.mode)
     elif args.command == 'export':
         training_file = Path.home() / '.applogs' / 'logs' / 'training-ready.jsonl'
         if not training_file.exists():
