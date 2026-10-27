@@ -76,9 +76,29 @@ def score_workflow(workflow):
             else:
                 action_types.add('shell_other')
         elif source in ('chrome', 'safari'):
-            action_types.add('browse')
+            etype = a.get('type', '')
+            if etype in ('navigation', 'page_load'):
+                action_types.add('web_navigate')
+            elif etype == 'tab_focus':
+                action_types.add('web_focus')
+            elif etype == 'tab_blur':
+                action_types.add('web_blur')
+            elif etype in ('app_focus', 'app_blur', 'app_launch', 'app_quit'):
+                action_types.add('app_lifecycle')
+            else:
+                action_types.add('web_other')
         elif source == 'office':
-            action_types.add('office')
+            etype = a.get('type', '')
+            if etype == 'doc_save':
+                action_types.add('doc_save')
+            elif etype == 'doc_open':
+                action_types.add('doc_open')
+            elif etype == 'doc_close':
+                action_types.add('doc_close')
+            elif etype == 'doc_focus':
+                action_types.add('doc_focus')
+            else:
+                action_types.add('office_lifecycle')
     
     if len(action_types) >= 3:
         score += 0.2
@@ -111,7 +131,18 @@ def score_workflow(workflow):
             reasons.append('has document saves')
             has_outcome = True
             break
-    
+
+    # Temporal outcome proxy: next_action_delay is computed for every event
+    # and is the primary outcome signal for browser-only workflows.
+    if not has_outcome:
+        for a in actions:
+            d = a.get('outcome', {}).get('next_action_delay_s')
+            if d is not None:
+                score += 0.05
+                reasons.append('has temporal outcome signal')
+                has_outcome = True
+                break
+
     if not has_outcome:
         reasons.append('no outcome signals')
     
@@ -321,13 +352,21 @@ def refine_logs(use_llm=False):
     )
     
     # 10. Build training-ready set (only high + medium)
+    # Use workflow action membership directly: detect_workflows assigns its own
+    # id sequence independent of the context.workflow_id stamped by
+    # assign_workflow_ids, so an id join would drop the vast majority of
+    # actions. Each workflow's `actions` list already holds the enriched entries.
     high_medium_workflows = [wf for wf in workflows if wf['quality_tier'] in ('high', 'medium')]
-    high_medium_ids = set(wf['id'] for wf in high_medium_workflows)
     
     training_ready = []
-    for entry in enriched:
-        wf_id = entry.get('context', {}).get('workflow_id')
-        if wf_id in high_medium_ids:
+    seen_ids = set()
+    for wf in high_medium_workflows:
+        for entry in wf.get('actions', []):
+            # Deduplicate by identity in case an entry appears in multiple workflows.
+            entry_id = id(entry)
+            if entry_id in seen_ids:
+                continue
+            seen_ids.add(entry_id)
             training_ready.append(entry)
     
     report['training_ready_count'] = len(training_ready)
